@@ -153,7 +153,12 @@ export const changePassword = async (
             );
         }
 
-        admin.password = newPassword;
+        const hashedPassword = await bcrypt.hash(
+            newPassword,
+            10
+        );
+
+        admin.password = hashedPassword;
 
         admin.passwordChangedAt =
             new Date();
