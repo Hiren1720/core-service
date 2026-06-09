@@ -1,16 +1,21 @@
 import { Router } from "express";
 
-import { getProfile } from "../../controllers/admin/profile/profile.controller.js";
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware.js";
 import { upload } from "../../middleware/upload.middleware.js";
-import { createCompany } from "../../controllers/admin/company/company.controller.js";
+import { createCompany, getCompanies, getCompaniesCount } from "../../controllers/admin/company/company.controller.js";
 
 const router = Router();
 
 router.get(
-    "/",
+    "/list",
     authenticateAdmin,
-    getProfile
+    getCompanies
+);
+
+router.get(
+    "/count",
+    authenticateAdmin,
+    getCompaniesCount
 );
 
 router.post(

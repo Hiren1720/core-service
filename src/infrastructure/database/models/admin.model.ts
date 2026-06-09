@@ -1,9 +1,5 @@
 import { Schema, model } from "mongoose";
-
-export enum AdminStatus {
-    ACTIVE = "ACTIVE",
-    INACTIVE = "INACTIVE",
-}
+import { status } from "../../../types/types";
 
 const AdminSchema = new Schema(
     {
@@ -45,8 +41,8 @@ const AdminSchema = new Schema(
 
         status: {
             type: String,
-            enum: Object.values(AdminStatus),
-            default: AdminStatus.ACTIVE,
+            enum: Object.values(status),
+            default: status.ACTIVE,
         },
 
         lastLoginAt: {

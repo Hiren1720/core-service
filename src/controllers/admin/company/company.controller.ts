@@ -7,6 +7,7 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
+import { status } from "../../../types/types.js";
 
 export const createCompany = async (
     req: Request,
@@ -79,6 +80,11 @@ export const createCompany = async (
                     modules: parsedModules,
                     employeePrice,
                     productionPrice,
+                    employeeStats: {
+                        active: 1,
+                        inactive: 0,
+                        deleted: 0,
+                    }
                 },
             ],
             { session }
@@ -157,3 +163,97 @@ export const createCompany = async (
         await session.endSession();
     }
 };
+
+
+export const getCompanies = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const page =
+            Number(req.query.page) || 1;
+
+        const limit =
+            Number(req.query.limit) || 10;
+
+        const skip =
+            (page - 1) * limit;
+
+        const search =
+            req.query.search?.toString() || "";
+
+        const status =
+            req.query.status?.toString();
+
+        const match: any = {};
+
+        if (search) {
+            match.companyName = {
+                $regex: search,
+                $options: "i",
+            };
+        }
+
+        if (status) {
+            match.status = status;
+        }
+
+        const [companies, totalResult] =
+            await Promise.all([
+                CompanyModel.find(match)
+                    .populate({
+                        path: "companyRepresentative",
+                        select: "firstName lastName profileImage",
+                    })
+                    .select("companyName companyAddress companyLogo status employeeStats createdAt")
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+
+                CompanyModel.countDocuments(
+                    match
+                ),
+            ]);
+
+        return res.status(200).json(
+            ApiResponse.success(
+                {
+                    companies,
+                    total: totalResult,
+                },
+                "Companies fetched successfully"
+            )
+        );
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getCompaniesCount = async (req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const [active, inactive, deleted] = await Promise.all([
+            CompanyModel.countDocuments({ status: "ACTIVE" as status }),
+            CompanyModel.countDocuments({ status: "INACTIVE" as status }),
+            CompanyModel.countDocuments({ status: "DELETED" as status }),
+        ]);
+
+        return res.status(200).json(
+            ApiResponse.success(
+                {
+                    total: active + inactive + deleted,
+                    active,
+                    inactive,
+                    deleted
+                },
+                "Company counts fetched successfully"
+            )
+        );
+    } catch (error) {
+        next(error);
+    }
+}

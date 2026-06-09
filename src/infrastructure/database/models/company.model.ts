@@ -1,16 +1,12 @@
 import { Schema, model } from "mongoose";
-
-export enum CompanyStatus {
-    ACTIVE = "ACTIVE",
-    INACTIVE = "INACTIVE",
-}
+import { status } from "../../../types/types";
 
 const CompanySchema = new Schema(
     {
         status: {
             type: String,
-            enum: Object.values(CompanyStatus),
-            default: CompanyStatus.ACTIVE,
+            enum: Object.values(status),
+            default: status.ACTIVE,
         },
 
         companyName: {
@@ -58,6 +54,22 @@ const CompanySchema = new Schema(
         companyRepresentative: {
             type: Schema.Types.ObjectId,
             ref: "User"
+        },
+        employeeStats: {
+            active: {
+                type: Number,
+                default: 0
+            },
+
+            inactive: {
+                type: Number,
+                default: 0
+            },
+
+            deleted: {
+                type: Number,
+                default: 0
+            }
         }
     },
     {
