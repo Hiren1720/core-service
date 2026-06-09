@@ -1,6 +1,7 @@
 import { Router } from "express";
 import AdminAuthRoutes from "./admin/auth.routes.js";
 import AdminProfileRoutes from "./admin/profile.routes.js";
+import AdminCompanyRoutes from "./admin/company.routes.js";
 const router = Router();
 
 router.use(
@@ -13,4 +14,8 @@ router.use(
   AdminProfileRoutes
 );
 
+router.use(
+  "/admin/companies",
+  AdminCompanyRoutes
+)
 export default router;
