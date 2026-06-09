@@ -51,6 +51,10 @@ export const login = async (
             firstName: admin.firstName,
             lastName: admin.lastName,
             email: admin.email,
+            profileImage: admin.profileImage,
+            company: {
+                companyLogo: admin.company.companyLogo
+            },
             token
         }
 
