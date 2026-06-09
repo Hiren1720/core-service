@@ -15,8 +15,9 @@ export const updateProfile = async (
             firstName,
             lastName,
             phone,
-            profileImage,
-            company,
+            companyName,
+            companyEmail,
+            gstin,
         } = req.body;
         const adminId = req.user?.id;
 
@@ -29,21 +30,16 @@ export const updateProfile = async (
         admin.firstName = firstName ?? admin.firstName;
         admin.lastName = lastName ?? admin.lastName;
         admin.phone = phone ?? admin.phone;
-        admin.profileImage = profileImage ?? admin.profileImage;
 
-        if (company) {
-            admin.company.companyName =
-                company.companyName ?? admin.company.companyName;
+        admin.company.companyName =
+            companyName ?? admin.company.companyName;
 
-            admin.company.gstin =
-                company.gstin ?? admin.company.gstin;
+        admin.company.gstin =
+            gstin ?? admin.company.gstin;
 
-            admin.company.companyEmail =
-                company.companyEmail ?? admin.company.companyEmail;
+        admin.company.companyEmail =
+            companyEmail ?? admin.company.companyEmail;
 
-            admin.company.companyLogo =
-                company.companyLogo ?? admin.company.companyLogo;
-        }
 
         const files = req.files as {
             profileImage?: Express.Multer.File[];
