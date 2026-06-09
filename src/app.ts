@@ -10,7 +10,12 @@ import path from "path";
 
 const app = express();
 
-app.use(cors());
+app.use(
+    cors({
+        origin: "*",
+        credentials: true,
+    })
+);
 
 app.use(helmet({
     crossOriginResourcePolicy: false,
