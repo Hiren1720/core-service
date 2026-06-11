@@ -51,6 +51,10 @@ const CompanySchema = new Schema(
             type: Number,
             default: 0
         },
+        assignedBankAccount: {
+            type: Schema.Types.ObjectId,
+            ref: "BankAccount"
+        },
         companyRepresentative: {
             type: Schema.Types.ObjectId,
             ref: "User"

@@ -24,6 +24,11 @@ const UserSchema = new Schema(
             type: String,
             default: "",
         },
+        gender: {
+            type: String,
+            enum: ["male", "female", "other"],
+            default: "other"
+        },
         password: {
             type: String,
             required: true,
