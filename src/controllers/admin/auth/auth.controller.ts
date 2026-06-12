@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { NextFunction, Request, Response } from "express";
 import { AdminModel } from "../../../infrastructure/database/models/admin.model.js";
-import { generateToken } from "../../../shared/utils/jwt";
+import { generateToken } from "../../../shared/utils/adminJwt.js";
 import { ApiResponse } from "../../../shared/response/api-response.js";
 
 
