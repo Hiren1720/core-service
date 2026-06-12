@@ -32,6 +32,7 @@ export const createCompany = async (
             phone,
             gender,
             assignedBankAccount,
+            generateInvoiceWithGST,
 
             modules,
             employeePrice,
@@ -80,6 +81,7 @@ export const createCompany = async (
                     companyPhone,
                     companyAddress,
                     assignedBankAccount,
+                    generateInvoiceWithGST,
                     modules: parsedModules,
                     employeePrice,
                     productionPrice,
@@ -108,6 +110,7 @@ export const createCompany = async (
                     gender,
                     password: hashedPassword,
                     companyId: company._id,
+                    role: "OWNER"
                 },
             ],
             { session }
@@ -209,6 +212,7 @@ export const updateCompany = async (
             companyPhone,
             companyAddress,
             assignedBankAccount,
+            generateInvoiceWithGST,
 
             firstName,
             lastName,
@@ -242,6 +246,10 @@ export const updateCompany = async (
         if (assignedBankAccount !== undefined)
             company.assignedBankAccount =
                 assignedBankAccount;
+
+        if (generateInvoiceWithGST !== undefined)
+            company.generateInvoiceWithGST =
+                generateInvoiceWithGST;
 
         if (employeePrice !== undefined)
             company.employeePrice =
@@ -458,6 +466,40 @@ export const getCompaniesCount = async (req: Request,
                     deleted
                 },
                 "Company counts fetched successfully"
+            )
+        );
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const getCompanyById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const { companyId } = req.params;
+
+        const company = await CompanyModel.findById(
+            companyId
+        )
+            .populate("assignedBankAccount")
+            .populate("companyRepresentative")
+            .lean();
+
+        if (!company) {
+            return res.status(404).json(
+                ApiResponse.error(
+                    "Company not found"
+                )
+            );
+        }
+
+        return res.status(200).json(
+            ApiResponse.success(
+                company,
+                "Company fetched successfully"
             )
         );
     } catch (error) {

@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware.js";
 import { upload } from "../../middleware/upload.middleware.js";
-import { createCompany, getCompanies, getCompaniesCount, updateCompany } from "../../controllers/admin/company/company.controller.js";
+import { createCompany, getCompanies, getCompaniesCount, getCompanyById, updateCompany } from "../../controllers/admin/company/company.controller.js";
 
 const router = Router();
 
@@ -16,6 +16,12 @@ router.get(
     "/count",
     authenticateAdmin,
     getCompaniesCount
+);
+
+router.get(
+    "/:companyId",
+    authenticateAdmin,
+    getCompanyById
 );
 
 router.post(

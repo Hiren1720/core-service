@@ -55,6 +55,10 @@ const CompanySchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "BankAccount"
         },
+        generateInvoiceWithGST: {
+            type: Boolean,
+            default: false
+        },
         companyRepresentative: {
             type: Schema.Types.ObjectId,
             ref: "User"
