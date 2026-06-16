@@ -26,7 +26,7 @@ export const login = async (
             await UserModel.findOne({
                 email,
                 status: "ACTIVE" as status,
-            }).select("+password");
+            }).select("+password").populate("companyId", "companyLogo");
 
         if (!user) {
             return res.status(400).json(
@@ -55,7 +55,7 @@ export const login = async (
                 userId:
                     user._id.toString(),
                 companyId:
-                    user.companyId.toString(),
+                    user.companyId._id.toString(),
                 role: user.role,
             });
 
@@ -84,6 +84,7 @@ export const login = async (
             new Date();
 
         await user.save();
+        const company = user.companyId as any;
 
         return res.status(200).json(
             ApiResponse.success(
@@ -99,8 +100,9 @@ export const login = async (
                         role:
                             user.role,
                         companyId:
-                            user.companyId,
-                        profileImage: user.profileImage
+                            user.companyId._id,
+                        profileImage: user.profileImage,
+                        companyLogo: company?.companyLogo || ""
                     },
                     accessToken,
                     refreshToken,
