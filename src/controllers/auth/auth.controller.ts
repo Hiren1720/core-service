@@ -84,7 +84,6 @@ export const login = async (
             new Date();
 
         await user.save();
-        const company = user.companyId as any;
 
         return res.status(200).json(
             ApiResponse.success(
@@ -99,10 +98,8 @@ export const login = async (
                             user.email,
                         role:
                             user.role,
-                        companyId:
-                            user.companyId._id,
                         profileImage: user.profileImage,
-                        companyLogo: company?.companyLogo || ""
+                        company: user.companyId
                     },
                     accessToken,
                     refreshToken,
