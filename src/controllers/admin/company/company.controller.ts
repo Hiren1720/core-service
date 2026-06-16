@@ -31,6 +31,7 @@ export const createCompany = async (
             email,
             phone,
             gender,
+            address,
             assignedBankAccount,
             generateInvoiceWithGST,
 
@@ -110,6 +111,7 @@ export const createCompany = async (
                     gender,
                     password: hashedPassword,
                     companyId: company._id,
+                    address,
                     role: "OWNER"
                 },
             ],

@@ -38,6 +38,10 @@ const UserSchema = new Schema(
             type: String,
             default: "",
         },
+        address: {
+            type: String,
+            default: "",
+        },
         status: {
             type: String,
             enum: Object.values(status),
@@ -50,6 +54,14 @@ const UserSchema = new Schema(
         passwordChangedAt: {
             type: Date,
             default: null,
+        },
+        resetPasswordToken: {
+            type: String,
+            default: null,
+        },
+        resetPasswordExpires: {
+            type: Date,
+            default: null
         },
         role: {
             type: String,
@@ -64,6 +76,7 @@ const UserSchema = new Schema(
         companyId: {
             type: Schema.Types.ObjectId,
             ref: "Company",
+            required: true,
         }
     },
     {

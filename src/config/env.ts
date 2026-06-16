@@ -20,7 +20,12 @@ const envSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string(),
 
-  JWT_REFRESH_SECRET: z.string()
+  JWT_REFRESH_SECRET: z.string(),
+
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string(),
+  GOOGLE_REFRESH_TOKEN: z.string(),
+  MAIL_FROM: z.string(),
 });
 
 export const env =

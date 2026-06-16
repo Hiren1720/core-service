@@ -6,6 +6,7 @@ declare global {
       user?: {
         id: string;
         role: string;
+        companyId?: string;
       };
     }
   }
