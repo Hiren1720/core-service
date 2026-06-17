@@ -5,6 +5,7 @@ import AdminCompanyRoutes from "./admin/company.routes.js";
 import AdminBankAccountRoutes from "./admin/bankAccount.routes.js";
 
 import AuthRoutes from "./auth/auth.routes.js";
+import OrganizationRoutes from "./organization";
 
 const router = Router();
 
@@ -30,5 +31,7 @@ router.use(
 
 
 router.use("/auth", AuthRoutes);
+
+router.use("/organization", OrganizationRoutes);
 
 export default router;
