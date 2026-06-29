@@ -3,6 +3,7 @@ import { BankAccountModel } from "./bankAccount.model.js";
 import { BranchModel } from "./branch.model.js";
 import { CompanyModel } from "./company.model.js";
 import { DepartmentModel } from "./department.model.js";
+import { DesignationModel } from "./designation.model.js";
 import { ShiftModel } from "./shift.model.js";
 import { UserModel } from "./user.model.js";
 import { UserSessionModel } from "./userSession.model.js";
@@ -13,6 +14,7 @@ export {
     BranchModel,
     CompanyModel,
     DepartmentModel,
+    DesignationModel,
     ShiftModel,
     UserModel,
     UserSessionModel,
