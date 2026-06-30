@@ -1,0 +1,172 @@
+import { NextFunction, Request, Response } from "express";
+import { ApiResponse } from "../../shared/response/api-response";
+import { LeaveModel } from "../../infrastructure/database/models";
+
+export const createLeave = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { name, description, isPaid } = req.body;
+
+    const leave = await LeaveModel.create({
+      companyId: req.user!.companyId,
+      name,
+      description,
+      isPaid
+    });
+
+    return res
+      .status(201)
+      .json(
+        ApiResponse.success(leave, "Leave created successfully"),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLeaves = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.toString() || "";
+
+    const status = req.query.status?.toString();
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
+    if (search) {
+      filter.name = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const [leaves, total] = await Promise.all([
+      LeaveModel.find(filter)
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      LeaveModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          leaves,
+          total,
+        },
+        "Leaves fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLeaveById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const leave = await LeaveModel.findOne({
+      _id: req.params.leaveId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!leave) {
+      return res.status(404).json(ApiResponse.error("Leave not found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(leave, "Leave fetched successfully"),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateLeave = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const leave = await LeaveModel.findOne({
+      _id: req.params.leaveId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!leave) {
+      return res.status(404).json(ApiResponse.error("Leave not found"));
+    }
+
+    const { name, description, isPaid } = req.body;
+
+    if (name !== undefined) leave.name = name;
+
+    if (description !== undefined) leave.description = description;
+
+    if (isPaid !== undefined) leave.isPaid = isPaid;
+
+    await leave.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Leave updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateLeaveStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { status } = req.body;
+
+    const leave = await LeaveModel.findOne({
+      _id: req.params.leaveId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!leave) {
+      return res.status(404).json(ApiResponse.error("Leave not found"));
+    }
+
+    leave.status = status;
+
+    await leave.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
