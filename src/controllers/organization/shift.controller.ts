@@ -3,259 +3,191 @@ import { ShiftModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 
 export const createShift = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const {
-            name,
-            startTime,
-            endTime,
-            breakStartTime,
-            breakEndTime,
-            branchIds,
-        } = req.body;
+  try {
+    const {
+      name,
+      startTime,
+      endTime,
+      breakStartTime,
+      breakEndTime,
+      branchIds,
+    } = req.body;
 
-        const shift =
-            await ShiftModel.create({
-                companyId:
-                    req.user!.companyId,
+    const shift = await ShiftModel.create({
+      companyId: req.user!.companyId,
 
-                name,
-                startTime,
-                endTime,
-                breakStartTime,
-                breakEndTime,
-                branchIds,
-            });
+      name,
+      startTime,
+      endTime,
+      breakStartTime,
+      breakEndTime,
+      branchIds,
+    });
 
-        return res.status(201).json(
-            ApiResponse.success(
-                shift,
-                "Shift created successfully"
-            )
-        );
-    } catch (error) {
-        next(error);
-    }
+    return res
+      .status(201)
+      .json(ApiResponse.success(shift, "Shift created successfully"));
+  } catch (error) {
+    next(error);
+  }
 };
-
 
 export const getShifts = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const page =
-            Number(req.query.page) || 1;
+  try {
+    const page = Number(req.query.page) || 1;
 
-        const limit =
-            Number(req.query.limit) || 10;
+    const limit = Number(req.query.limit) || 10;
 
-        const skip =
-            (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-        const search =
-            req.query.search?.toString() ||
-            "";
+    const search = req.query.search?.toString() || "";
 
-        const status =
-            req.query.status?.toString();
+    const status = req.query.status?.toString();
 
-        const filter: any = {
-            companyId:
-                req.user!.companyId,
-        };
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
 
-        if (search) {
-            filter.name = {
-                $regex: search,
-                $options: "i",
-            };
-        }
-
-        if (status) {
-            filter.status = status;
-        }
-
-        const [shifts, total] =
-            await Promise.all([
-                ShiftModel.find(filter)
-                    .populate(
-                        "branchIds",
-                        "name"
-                    )
-                    .sort({
-                        createdAt: -1,
-                    })
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-
-                ShiftModel.countDocuments(
-                    filter
-                ),
-            ]);
-
-        return res.status(200).json(
-            ApiResponse.success(
-                {
-                    shifts,
-                    total
-                },
-                "Shifts fetched successfully"
-            )
-        );
-    } catch (error) {
-        next(error);
+    if (search) {
+      filter.name = {
+        $regex: search,
+        $options: "i",
+      };
     }
-};
 
+    if (status) {
+      filter.status = status;
+    }
+
+    const [shifts, total] = await Promise.all([
+      ShiftModel.find(filter)
+        .populate("branchIds", "name")
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      ShiftModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          shifts,
+          total,
+        },
+        "Shifts fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getShiftById = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const shift =
-            await ShiftModel.findOne({
-                _id: req.params.shiftId,
-                companyId:
-                    req.user!.companyId,
-            }).populate(
-                "branchIds",
-                "name"
-            );
+  try {
+    const shift = await ShiftModel.findOne({
+      _id: req.params.shiftId,
+      companyId: req.user!.companyId,
+    }).populate("branchIds", "name");
 
-        if (!shift) {
-            return res.status(404).json(
-                ApiResponse.error(
-                    "Shift not found"
-                )
-            );
-        }
-
-        return res.status(200).json(
-            ApiResponse.success(
-                shift,
-                "Shift fetched successfully"
-            )
-        );
-    } catch (error) {
-        next(error);
+    if (!shift) {
+      return res.status(404).json(ApiResponse.error("Shift not found"));
     }
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(shift, "Shift fetched successfully"));
+  } catch (error) {
+    next(error);
+  }
 };
-
-
 
 export const updateShift = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const shift =
-            await ShiftModel.findOne({
-                _id: req.params.shiftId,
-                companyId:
-                    req.user!.companyId,
-            });
+  try {
+    const shift = await ShiftModel.findOne({
+      _id: req.params.shiftId,
+      companyId: req.user!.companyId,
+    });
 
-        if (!shift) {
-            return res.status(404).json(
-                ApiResponse.error(
-                    "Shift not found"
-                )
-            );
-        }
-
-        const {
-            name,
-            startTime,
-            endTime,
-            breakStartTime,
-            breakEndTime,
-            branchIds,
-        } = req.body;
-
-        if (name !== undefined)
-            shift.name = name;
-
-        if (startTime !== undefined)
-            shift.startTime = startTime;
-
-        if (endTime !== undefined)
-            shift.endTime = endTime;
-
-        if (breakStartTime !== undefined)
-            shift.breakStartTime =
-                breakStartTime;
-
-        if (breakEndTime !== undefined)
-            shift.breakEndTime =
-                breakEndTime;
-
-        if (branchIds !== undefined)
-            shift.branchIds = branchIds;
-
-        await shift.save();
-
-        return res.status(200).json(
-            ApiResponse.success(
-                null,
-                "Shift updated successfully"
-            )
-        );
-    } catch (error) {
-        next(error);
+    if (!shift) {
+      return res.status(404).json(ApiResponse.error("Shift not found"));
     }
+
+    const {
+      name,
+      startTime,
+      endTime,
+      breakStartTime,
+      breakEndTime,
+      branchIds,
+    } = req.body;
+
+    if (name !== undefined) shift.name = name;
+
+    if (startTime !== undefined) shift.startTime = startTime;
+
+    if (endTime !== undefined) shift.endTime = endTime;
+
+    if (breakStartTime !== undefined) shift.breakStartTime = breakStartTime;
+
+    if (breakEndTime !== undefined) shift.breakEndTime = breakEndTime;
+
+    if (branchIds !== undefined) shift.branchIds = branchIds;
+
+    await shift.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Shift updated successfully"));
+  } catch (error) {
+    next(error);
+  }
 };
 
-
-
 export const updateShiftStatus = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const { status } =
-            req.body;
+  try {
+    const { status } = req.body;
 
-        const shift =
-            await ShiftModel.findOne({
-                _id: req.params.shiftId,
-                companyId:
-                    req.user!
-                        .companyId,
-            });
+    const shift = await ShiftModel.findOne({
+      _id: req.params.shiftId,
+      companyId: req.user!.companyId,
+    });
 
-        if (!shift) {
-            return res
-                .status(404)
-                .json(
-                    ApiResponse.error(
-                        "Shift not found"
-                    )
-                );
-        }
-
-        shift.status = status;
-
-        await shift.save();
-
-        return res
-            .status(200)
-            .json(
-                ApiResponse.success(
-                    null,
-                    "Status updated successfully"
-                )
-            );
-    } catch (error) {
-        next(error);
+    if (!shift) {
+      return res.status(404).json(ApiResponse.error("Shift not found"));
     }
+
+    shift.status = status;
+
+    await shift.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
 };

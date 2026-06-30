@@ -1,0 +1,181 @@
+import { NextFunction, Request, Response } from "express";
+import { HolidayModel } from "../../infrastructure/database/models";
+import { ApiResponse } from "../../shared/response/api-response";
+
+export const createHoliday = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { name, description, effectiveYear, startDate, endDate } = req.body;
+
+    const holiday = await HolidayModel.create({
+      companyId: req.user!.companyId,
+      name,
+      startDate,
+      endDate,
+      description,
+      effectiveYear,
+    });
+
+    return res
+      .status(201)
+      .json(ApiResponse.success(holiday, "Holiday created successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHolidays = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.toString() || "";
+
+    const status = req.query.status?.toString();
+
+    const effectiveYear =
+      req.query.effectiveYear ?? Number(req.query.effectiveYear);
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
+    if (search) {
+      filter.name = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (effectiveYear) {
+      filter.effectiveYear = effectiveYear;
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const [holidays, total] = await Promise.all([
+      HolidayModel.find(filter)
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      HolidayModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          holidays,
+          total,
+        },
+        "Holidays fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getHolidayById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const holiday = await HolidayModel.findOne({
+      _id: req.params.holidayId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!holiday) {
+      return res.status(404).json(ApiResponse.error("Holiday not found"));
+    }
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(holiday, "Holiday fetched successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHoliday = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const holiday = await HolidayModel.findOne({
+      _id: req.params.holidayId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!holiday) {
+      return res.status(404).json(ApiResponse.error("Holiday not found"));
+    }
+
+    const { name, startDate, endDate, description, effectiveYear } = req.body;
+
+    if (name !== undefined) holiday.name = name;
+
+    if (startDate !== undefined) holiday.startDate = startDate;
+
+    if (endDate !== undefined) holiday.endDate = endDate;
+
+    if (description !== undefined) holiday.description = description;
+
+    if (effectiveYear !== undefined) holiday.effectiveYear = effectiveYear;
+
+    await holiday.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Holiday updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateHolidayStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { status } = req.body;
+
+    const holiday = await HolidayModel.findOne({
+      _id: req.params.holidayId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!holiday) {
+      return res.status(404).json(ApiResponse.error("Holiday not found"));
+    }
+
+    holiday.status = status;
+
+    await holiday.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};

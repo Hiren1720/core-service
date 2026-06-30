@@ -4,6 +4,7 @@ import ShiftRoutes from "./shift.routes";
 import DepartmentRoutes from "./department.routes";
 import DesignationRoutes from "./designation.routes";
 import LeaveRoutes from "./leave.routes";
+import HolidayRoutes from "./holiday.routes";
 
 const router = Router();
 
@@ -31,5 +32,10 @@ router.use(
   "/leaves",
   LeaveRoutes
 );
+
+router.use(
+  "/holidays",
+  HolidayRoutes
+)
 
 export default router;
