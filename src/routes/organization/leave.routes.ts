@@ -5,6 +5,7 @@ import {
   createLeave,
   getLeaveById,
   getLeaves,
+  getLeavesCount,
   updateLeave,
   updateLeaveStatus,
 } from "../../controllers/organization/leave.controller.js";
@@ -14,6 +15,8 @@ const router = Router();
 router.post("/", authenticateUser, authorize("OWNER"), createLeave);
 
 router.get("/", authenticateUser, getLeaves);
+
+router.get("/count", authenticateUser, getLeavesCount);
 
 router.get("/:leaveId", authenticateUser, getLeaveById);
 

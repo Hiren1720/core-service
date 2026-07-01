@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { HolidayModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
+import { status } from "../../types/types";
 
 export const createHoliday = async (
   req: Request,
@@ -90,6 +91,34 @@ export const getHolidays = async (
     next(error);
   }
 };
+
+export const getHolidaysCount = async (req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const [active, inactive, deleted] = await Promise.all([
+            HolidayModel.countDocuments({ status: "ACTIVE" as status }),
+            HolidayModel.countDocuments({ status: "INACTIVE" as status }),
+            HolidayModel.countDocuments({ status: "DELETED" as status }),
+        ]);
+
+        return res.status(200).json(
+            ApiResponse.success(
+                {
+                    total: active + inactive + deleted,
+                    active,
+                    inactive,
+                    deleted
+                },
+                "Holiday counts fetched successfully"
+            )
+        );
+    } catch (error) {
+        next(error);
+    }
+}
+
 
 export const getHolidayById = async (
   req: Request,

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { LeaveModel } from "../../infrastructure/database/models";
+import { status } from "../../types/types";
 
 export const createLeave = async (
   req: Request,
@@ -14,14 +15,12 @@ export const createLeave = async (
       companyId: req.user!.companyId,
       name,
       description,
-      isPaid
+      isPaid,
     });
 
     return res
       .status(201)
-      .json(
-        ApiResponse.success(leave, "Leave created successfully"),
-      );
+      .json(ApiResponse.success(leave, "Leave created successfully"));
   } catch (error) {
     next(error);
   }
@@ -84,6 +83,34 @@ export const getLeaves = async (
   }
 };
 
+export const getLeavesCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const [active, inactive, deleted] = await Promise.all([
+      LeaveModel.countDocuments({ status: "ACTIVE" as status }),
+      LeaveModel.countDocuments({ status: "INACTIVE" as status }),
+      LeaveModel.countDocuments({ status: "DELETED" as status }),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          total: active + inactive + deleted,
+          active,
+          inactive,
+          deleted,
+        },
+        "Leave counts fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getLeaveById = async (
   req: Request,
   res: Response,
@@ -101,9 +128,7 @@ export const getLeaveById = async (
 
     return res
       .status(200)
-      .json(
-        ApiResponse.success(leave, "Leave fetched successfully"),
-      );
+      .json(ApiResponse.success(leave, "Leave fetched successfully"));
   } catch (error) {
     next(error);
   }
