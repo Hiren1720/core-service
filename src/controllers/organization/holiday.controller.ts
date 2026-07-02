@@ -92,33 +92,44 @@ export const getHolidays = async (
   }
 };
 
-export const getHolidaysCount = async (req: Request,
-    res: Response,
-    next: NextFunction
+export const getHolidaysCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
-    try {
-        const [active, inactive, deleted] = await Promise.all([
-            HolidayModel.countDocuments({ status: "ACTIVE" as status }),
-            HolidayModel.countDocuments({ status: "INACTIVE" as status }),
-            HolidayModel.countDocuments({ status: "DELETED" as status }),
-        ]);
+  try {
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
 
-        return res.status(200).json(
-            ApiResponse.success(
-                {
-                    total: active + inactive + deleted,
-                    active,
-                    inactive,
-                    deleted
-                },
-                "Holiday counts fetched successfully"
-            )
-        );
-    } catch (error) {
-        next(error);
+    const effectiveYear =
+      req.query.effectiveYear ?? Number(req.query.effectiveYear);
+
+    if (effectiveYear) {
+      filter.effectiveYear = effectiveYear;
     }
-}
 
+    const [active, inactive, deleted] = await Promise.all([
+      HolidayModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
+      HolidayModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
+      HolidayModel.countDocuments({ ...filter, status: "DELETED" as status }),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          total: active + inactive + deleted,
+          active,
+          inactive,
+          deleted,
+        },
+        "Holiday counts fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getHolidayById = async (
   req: Request,

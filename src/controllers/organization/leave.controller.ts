@@ -89,10 +89,14 @@ export const getLeavesCount = async (
   next: NextFunction,
 ) => {
   try {
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
     const [active, inactive, deleted] = await Promise.all([
-      LeaveModel.countDocuments({ status: "ACTIVE" as status }),
-      LeaveModel.countDocuments({ status: "INACTIVE" as status }),
-      LeaveModel.countDocuments({ status: "DELETED" as status }),
+      LeaveModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
+      LeaveModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
+      LeaveModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
 
     return res.status(200).json(
