@@ -6,32 +6,22 @@ import AdminBankAccountRoutes from "./admin/bankAccount.routes.js";
 
 import AuthRoutes from "./auth/auth.routes.js";
 import OrganizationRoutes from "./organization";
+import WorkforceRoutes from "./workforce";
 
 const router = Router();
 
-router.use(
-  "/admin/auth",
-  AdminAuthRoutes
-);
+router.use("/admin/auth", AdminAuthRoutes);
 
-router.use(
-  "/admin/profile",
-  AdminProfileRoutes
-);
+router.use("/admin/profile", AdminProfileRoutes);
 
-router.use(
-  "/admin/companies",
-  AdminCompanyRoutes
-)
+router.use("/admin/companies", AdminCompanyRoutes);
 
-router.use(
-  "/admin/bank-accounts",
-  AdminBankAccountRoutes
-)
-
+router.use("/admin/bank-accounts", AdminBankAccountRoutes);
 
 router.use("/auth", AuthRoutes);
 
 router.use("/organization", OrganizationRoutes);
+
+router.use("/workforce", WorkforceRoutes);
 
 export default router;

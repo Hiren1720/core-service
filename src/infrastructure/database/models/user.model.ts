@@ -1,91 +1,109 @@
 import { Schema, model } from "mongoose";
-import { status } from "../../../types/types";
+import { userStatus } from "../../../types/types";
 
 const UserSchema = new Schema(
-    {
-        firstName: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        lastName: {
-            type: String,
-            trim: true,
-            default: "",
-        },
-        email: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-        },
-        phone: {
-            type: String,
-            default: "",
-        },
-        gender: {
-            type: String,
-            enum: ["male", "female", "other"],
-            default: "other"
-        },
-        password: {
-            type: String,
-            required: true,
-            select: false,
-        },
-        profileImage: {
-            type: String,
-            default: "",
-        },
-        address: {
-            type: String,
-            default: "",
-        },
-        status: {
-            type: String,
-            enum: Object.values(status),
-            default: status.ACTIVE,
-        },
-        lastLoginAt: {
-            type: Date,
-            default: null,
-        },
-        passwordChangedAt: {
-            type: Date,
-            default: null,
-        },
-        resetPasswordToken: {
-            type: String,
-            default: null,
-        },
-        resetPasswordExpires: {
-            type: Date,
-            default: null
-        },
-        role: {
-            type: String,
-            enum: [
-                "OWNER",
-                "MANAGER",
-                "EMPLOYEE"
-            ],
-            default: "EMPLOYEE"
-        },
-
-        companyId: {
-            type: Schema.Types.ObjectId,
-            ref: "Company",
-            required: true,
-        }
+  {
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    {
-        timestamps: true,
-        versionKey: false,
-    }
+    lastName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    phone: {
+      type: Number,
+      default: null,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+      default: "other",
+    },
+    password: {
+      type: String,
+      select: false,
+    },
+    profileImage: {
+      type: String,
+      default: "",
+    },
+    address: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: Object.values(userStatus),
+      default: userStatus.ACTIVE,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+    },
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
+    role: {
+      type: String,
+      enum: ["OWNER", "MANAGER", "EMPLOYEE"],
+      default: "EMPLOYEE",
+    },
+
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
+    //extra fields for profile details
+    dob: {
+      type: Date,
+      default: null,
+    },
+    isMarried: {
+      type: Boolean,
+      default: false,
+    },
+    alternatePhone: {
+      type: Number,
+      default: null,
+    },
+    bloodGroup: {
+      type: String,
+      default: "",
+    },
+    isPhysicallyDisabled: {
+      type: Boolean,
+      default: false,
+    },
+    permanentAddress: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
-export const UserModel = model(
-    "User",
-    UserSchema
-);
+export const UserModel = model("User", UserSchema);
