@@ -8,18 +8,20 @@ import { HolidayModel } from "./holiday.model.js";
 import { LeaveModel } from "./leave.model.js";
 import { ShiftModel } from "./shift.model.js";
 import { UserModel } from "./user.model.js";
+import { UserDetailModel } from "./userDetail.model.js";
 import { UserSessionModel } from "./userSession.model.js";
 
 export {
-    AdminModel,
-    BankAccountModel,
-    BranchModel,
-    CompanyModel,
-    DepartmentModel,
-    DesignationModel,
-    HolidayModel,
-    LeaveModel,
-    ShiftModel,
-    UserModel,
-    UserSessionModel,
-}
+  AdminModel,
+  BankAccountModel,
+  BranchModel,
+  CompanyModel,
+  DepartmentModel,
+  DesignationModel,
+  HolidayModel,
+  LeaveModel,
+  ShiftModel,
+  UserModel,
+  UserDetailModel,
+  UserSessionModel,
+};
