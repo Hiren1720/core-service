@@ -12,3 +12,9 @@ export enum userStatus {
   INACTIVE = "INACTIVE",
   DELETED = "DELETED",
 }
+
+
+export enum payslipValueType{
+  PERCENTAGE= "PERCENTAGE",
+  FIXED="FIXED"
+}
