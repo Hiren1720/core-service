@@ -71,11 +71,6 @@ router.put(
   //   updateEmployeeProfile,
 );
 
-router.get(
-    "/:userId",
-    getEmployDetailById
-);
-
 router.get("/", authenticateUser, getEmployeeList);
 
 router.get("/count", authenticateUser, getEmployeeCount);
@@ -92,6 +87,11 @@ router.get(
   "/branch-shift-department",
   authenticateUser,
   getBranchShiftDepartmentList,
+);
+
+router.get(
+    "/:userId",
+    getEmployDetailById
 );
 
 export default router;

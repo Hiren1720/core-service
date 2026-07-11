@@ -227,7 +227,7 @@ export const getEmployDetailById = async (
     const user = await UserModel.findById(userId).lean();
     const userDetails = await UserDetailModel.findOne({ userId }).lean();
 
-     return res
+    return res
       .status(200)
       .json(
         ApiResponse.success(
@@ -811,29 +811,62 @@ export const getBranchShiftDepartmentList = async (
             newRoot: "$assignment",
           },
         },
+        {
+          $lookup: {
+            from: "users", // User collection name
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            userId: 1,
+            companyId: 1,
+            assignments: 1,
+            createdAt: 1,
+
+            "user._id": 1,
+            "user.role": 1,
+            "user.firstName": 1,
+            "user.lastName": 1,
+            "user.profileImage": 1,
+          },
+        },
       ]),
     ]);
 
     const branchCountMap = new Map<string, number>();
     const shiftCountMap = new Map<string, number>();
     const departmentCountMap = new Map<string, number>();
+    const departmentManagerMap = new Map<string, number>();
 
     for (const user of userAssignments) {
-      const assignment =
-        user.assignments.length > 1
-          ? user.assignments.filter((el: any) => el.isReporting)
-          : user.assignments[0];
+      for (const assignment of user.assignments) {
+        const manager = user.user.role === "MANAGER" ? user.user : undefined;
 
-      const branchKey = assignment.branchId.toString();
-      const shiftKey = `${assignment.branchId}_${assignment.shiftId}`;
-      const departmentKey = `${assignment.branchId}_${assignment.shiftId}_${assignment.departmentId}`;
+        const branchKey = assignment.branchId.toString();
+        const shiftKey = `${assignment.branchId}_${assignment.shiftId}`;
+        const departmentKey = `${assignment.branchId}_${assignment.shiftId}_${assignment.departmentId}`;
 
-      branchCountMap.set(branchKey, (branchCountMap.get(branchKey) || 0) + 1);
-      shiftCountMap.set(shiftKey, (shiftCountMap.get(shiftKey) || 0) + 1);
-      departmentCountMap.set(
-        departmentKey,
-        (departmentCountMap.get(departmentKey) || 0) + 1,
-      );
+        branchCountMap.set(branchKey, (branchCountMap.get(branchKey) || 0) + 1);
+        shiftCountMap.set(shiftKey, (shiftCountMap.get(shiftKey) || 0) + 1);
+        departmentCountMap.set(
+          departmentKey,
+          (departmentCountMap.get(departmentKey) || 0) + 1,
+        );
+
+        //For manager exclude reporting data only manged fields
+        if (!assignment.isReporting) {
+          departmentManagerMap.set(departmentKey, manager);
+        }
+      }
     }
 
     const data = branches.map((branch: any) => {
@@ -861,6 +894,9 @@ export const getBranchShiftDepartmentList = async (
                 departmentCountMap.get(
                   `${branch._id}_${shift._id}_${department._id}`,
                 ) || 0,
+              manager: departmentManagerMap.get(
+                `${branch._id}_${shift._id}_${department._id}`,
+              ),
             }));
 
           return {
