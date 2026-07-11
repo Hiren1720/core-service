@@ -5,6 +5,7 @@ import DepartmentRoutes from "./department.routes";
 import DesignationRoutes from "./designation.routes";
 import LeaveRoutes from "./leave.routes";
 import HolidayRoutes from "./holiday.routes";
+import PolicyRoutes from "./policy.routes";
 
 const router = Router();
 
@@ -36,6 +37,11 @@ router.use(
 router.use(
   "/holidays",
   HolidayRoutes
+)
+
+router.use(
+  "/policy",
+  PolicyRoutes
 )
 
 export default router;
