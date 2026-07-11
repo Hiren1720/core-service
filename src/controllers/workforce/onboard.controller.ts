@@ -6,12 +6,15 @@ import {
   UserModel,
   UserPolicyModel,
   CompanyModel,
+  BranchModel,
+  ShiftModel,
+  DepartmentModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import { userStatus } from "../../types/types";
+import { status, userStatus } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createEmployee = async (
@@ -506,6 +509,7 @@ export const assignRolesResponsibility = async (
   try {
     session.startTransaction();
     const assignedBy = req.user?.id as string;
+    const companyId = req.user?.companyId as string;
     const {
       userId,
       role,
@@ -593,46 +597,15 @@ export const assignRolesResponsibility = async (
       );
     }
 
-    // Assignments
-    if (!existingAssignment) {
-      operations.push(
-        UserAssignmentModel.create(
-          [
-            {
-              userId,
-              assignments: assignments.map((item: any) => ({
-                ...item,
-                assignedBy,
-                joinedAt: new Date(),
-              })),
-            },
-          ],
-          { session },
-        ),
-      );
-    } else {
-      // Compare only required fields
-      const isSame = existingAssignment.assignments.some((oldAssignment: any) =>
-        assignments.some(
-          (newAssignment: any) =>
-            oldAssignment.branchId.toString() === newAssignment.branchId &&
-            oldAssignment.shiftId.toString() === newAssignment.shiftId &&
-            oldAssignment.departmentId.toString() ===
-              newAssignment.departmentId &&
-            oldAssignment.designationId.toString() ===
-              newAssignment.designationId &&
-            (oldAssignment.reportingManagerId?.toString() || "") ===
-              (newAssignment.reportingManagerId || "") &&
-            oldAssignment.isReporting === newAssignment.isReporting,
-        ),
-      );
-
-      if (!isSame) {
+    // Assignments history
+    if (assignments) {
+      if (!existingAssignment) {
         operations.push(
           UserAssignmentModel.create(
             [
               {
                 userId,
+                companyId,
                 assignments: assignments.map((item: any) => ({
                   ...item,
                   assignedBy,
@@ -643,9 +616,44 @@ export const assignRolesResponsibility = async (
             { session },
           ),
         );
+      } else {
+        // Compare only required fields
+        const isSame = existingAssignment.assignments.every(
+          (oldAssignment: any) =>
+            assignments.some(
+              (newAssignment: any) =>
+                oldAssignment.branchId.toString() === newAssignment.branchId &&
+                oldAssignment.shiftId.toString() === newAssignment.shiftId &&
+                oldAssignment.departmentId.toString() ===
+                  newAssignment.departmentId &&
+                oldAssignment.designationId.toString() ===
+                  newAssignment.designationId &&
+                (oldAssignment.reportingManagerId?.toString() || "") ===
+                  (newAssignment.reportingManagerId || "") &&
+                oldAssignment.isReporting === newAssignment.isReporting,
+            ),
+        );
+
+        if (!isSame) {
+          operations.push(
+            UserAssignmentModel.create(
+              [
+                {
+                  userId,
+                  companyId,
+                  assignments: assignments.map((item: any) => ({
+                    ...item,
+                    assignedBy,
+                    joinedAt: new Date(),
+                  })),
+                },
+              ],
+              { session },
+            ),
+          );
+        }
       }
     }
-
     //other fields
     if (!user.employmentType || user.employmentType !== employmentType) {
       user.employmentType = employmentType;
@@ -689,11 +697,24 @@ export const assignRolesResponsibility = async (
         ),
       );
     }
-    
+
     // user status
     if (user.status === "PENDING") {
       user.status = "ACTIVE" as userStatus;
     }
+    //reporting assignments
+    const reportingAssignment =
+      role === "MANAGER"
+        ? assignments.find((el: any) => el.isReporting)
+        : assignments?.[0];
+    if (reportingAssignment?.branchId)
+      user.branchId = reportingAssignment.branchId;
+    if (reportingAssignment?.shiftId)
+      user.shiftId = reportingAssignment.shiftId;
+    if (reportingAssignment?.designationId)
+      user.designationId = reportingAssignment.designationId;
+    if (reportingAssignment?.departmentId)
+      user.departmentId = reportingAssignment.departmentId;
 
     // Execute all DB operations together
     await Promise.all(operations);
@@ -709,5 +730,140 @@ export const assignRolesResponsibility = async (
     next(error);
   } finally {
     await session.endSession();
+  }
+};
+
+export const getBranchShiftDepartmentList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const companyId = req.user!.companyId;
+
+    const [branches, shifts, departments, userAssignments] = await Promise.all([
+      BranchModel.find({
+        companyId,
+        status: status.ACTIVE,
+      })
+        .select("_id name")
+        .lean(),
+
+      ShiftModel.find({
+        companyId,
+        status: status.ACTIVE,
+      })
+        .select("_id name branchIds")
+        .lean(),
+
+      DepartmentModel.find({
+        companyId,
+        status: status.ACTIVE,
+      })
+        .select("_id name assignments")
+        .lean(),
+
+      UserAssignmentModel.aggregate([
+        {
+          $match: {
+            companyId: new mongoose.Types.ObjectId(companyId),
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+        {
+          $group: {
+            _id: "$userId",
+            assignment: {
+              $first: "$$ROOT",
+            },
+          },
+        },
+        {
+          $replaceRoot: {
+            newRoot: "$assignment",
+          },
+        },
+      ]),
+    ]);
+
+    const branchCountMap = new Map<string, number>();
+    const shiftCountMap = new Map<string, number>();
+    const departmentCountMap = new Map<string, number>();
+
+    for (const user of userAssignments) {
+      const assignment =
+        user.assignments.length > 1
+          ? user.assignments.filter((el: any) => el.isReporting)
+          : user.assignments[0];
+
+      const branchKey = assignment.branchId.toString();
+      const shiftKey = `${assignment.branchId}_${assignment.shiftId}`;
+      const departmentKey = `${assignment.branchId}_${assignment.shiftId}_${assignment.departmentId}`;
+
+      branchCountMap.set(branchKey, (branchCountMap.get(branchKey) || 0) + 1);
+      shiftCountMap.set(shiftKey, (shiftCountMap.get(shiftKey) || 0) + 1);
+      departmentCountMap.set(
+        departmentKey,
+        (departmentCountMap.get(departmentKey) || 0) + 1,
+      );
+    }
+
+    const data = branches.map((branch: any) => {
+      const branchShifts = shifts
+        .filter((shift: any) =>
+          shift.branchIds.some(
+            (id: any) => id.toString() === branch._id.toString(),
+          ),
+        )
+        .map((shift: any) => {
+          const shiftDepartments = departments
+            .filter((department: any) =>
+              department.assignments.some(
+                (assignment: any) =>
+                  assignment.branchId.toString() === branch._id.toString() &&
+                  assignment.shiftIds.some(
+                    (id: any) => id.toString() === shift._id.toString(),
+                  ),
+              ),
+            )
+            .map((department: any) => ({
+              _id: department._id,
+              name: department.name,
+              count:
+                departmentCountMap.get(
+                  `${branch._id}_${shift._id}_${department._id}`,
+                ) || 0,
+            }));
+
+          return {
+            _id: shift._id,
+            name: shift.name,
+            departments: shiftDepartments,
+            count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
+          };
+        });
+
+      return {
+        _id: branch._id,
+        name: branch.name,
+        shifts: branchShifts,
+        count: branchCountMap.get(branch._id.toString()) || 0,
+      };
+    });
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          data,
+          "Branch shift department options fetched successfully",
+        ),
+      );
+  } catch (error) {
+    next(error);
   }
 };

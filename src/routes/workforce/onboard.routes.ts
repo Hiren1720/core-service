@@ -4,6 +4,7 @@ import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   assignRolesResponsibility,
   createEmployee,
+  getBranchShiftDepartmentList,
   getEmployeeCount,
   getEmployeeList,
   getOnboardCompanyInfo,
@@ -85,6 +86,12 @@ router.post(
   "/roles-responsibility",
   authenticateUser,
   assignRolesResponsibility,
+);
+
+router.get(
+  "/branch-shift-department",
+  authenticateUser,
+  getBranchShiftDepartmentList,
 );
 
 export default router;

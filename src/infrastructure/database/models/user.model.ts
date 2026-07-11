@@ -73,10 +73,29 @@ const UserSchema = new Schema(
       ref: "Company",
       required: true,
     },
+    branchId: {
+      type: Schema.Types.ObjectId,
+      ref: "Branch",
+      default: null,
+    },
+    shiftId: {
+      type: Schema.Types.ObjectId,
+      ref: "Shift",
+      default: null,
+    },
+    departmentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      default: null,
+    },
+    designationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Department",
+      default: null,
+    },
     employmentType: {
       type: String,
       enum: Object.values(employmentTypeType),
-      default: "",
     },
     probationPeriod: {
       type: Number,

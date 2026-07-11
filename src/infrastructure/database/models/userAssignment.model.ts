@@ -66,6 +66,12 @@ const UserAssignmentSchema = new Schema(
       required: true,
       index: true,
     },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+      index: true,
+    },
 
     assignments: {
       type: [AssignmentSchema],
