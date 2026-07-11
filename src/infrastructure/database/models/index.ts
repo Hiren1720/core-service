@@ -13,6 +13,7 @@ import { ShiftModel } from "./shift.model.js";
 import { UserModel } from "./user.model.js";
 import { UserAssignmentModel } from "./userAssignment.model.js";
 import { UserDetailModel } from "./userDetail.model.js";
+import { UserHistoryModel } from "./userHistory.model.js";
 import { UserPayslipModel } from "./userPayslip.model.js";
 import { UserPolicyModel } from "./userPolicy.model.js";
 import { UserSessionModel } from "./userSession.model.js";
@@ -33,6 +34,7 @@ export {
   UserAssignmentModel,
   UserModel,
   UserDetailModel,
+  UserHistoryModel,
   UserPayslipModel,
   UserPolicyModel,
   UserSessionModel,

@@ -13,8 +13,14 @@ export enum userStatus {
   DELETED = "DELETED",
 }
 
+export enum payslipValueType {
+  PERCENTAGE = "PERCENTAGE",
+  FIXED = "FIXED",
+}
 
-export enum payslipValueType{
-  PERCENTAGE= "PERCENTAGE",
-  FIXED="FIXED"
+export enum employmentTypeType {
+  PERMANENT = "PERMANENT",
+  CONTRACT = "CONTRACT",
+  INTERN = "INTERN",
+  CONSULTANT = "CONSULTANT",
 }

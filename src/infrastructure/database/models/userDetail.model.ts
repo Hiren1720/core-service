@@ -105,7 +105,7 @@ const UserDetailSchema = new Schema(
       {
         card: {
           type: String,
-          enum: ["adhar", "pan", "voterId", "passport"],
+          enum: ["adhar", "pan", "voterId", "passport", "drivingId"],
           default: "",
         },
         cardNumber: {

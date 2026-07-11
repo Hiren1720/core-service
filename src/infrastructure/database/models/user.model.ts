@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { userStatus } from "../../../types/types";
+import { employmentTypeType, userStatus } from "../../../types/types";
 
 const UserSchema = new Schema(
   {
@@ -73,7 +73,15 @@ const UserSchema = new Schema(
       ref: "Company",
       required: true,
     },
-
+    employmentType: {
+      type: String,
+      enum: Object.values(employmentTypeType),
+      default: "",
+    },
+    probationPeriod: {
+      type: Number,
+      default: null,
+    },
     //extra fields for profile details
     dob: {
       type: Date,

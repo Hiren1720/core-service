@@ -12,6 +12,7 @@ import { saveFile } from "../../shared/services/file.service";
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { userStatus } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createEmployee = async (
   req: Request,
@@ -170,7 +171,7 @@ export const createEmployee = async (
           documents: parsedDocuments.map((item: any, index: number) => ({
             card: item.card,
             cardNumber: item.cardNumber,
-            
+
             front: files?.[`documents[${index}][front]`]?.[0]
               ? saveFile({
                   file: files[`documents[${index}][front]`][0],
@@ -248,7 +249,9 @@ export const getEmployeeList = async (
 
     const [employees, total] = await Promise.all([
       UserModel.find(filter)
-        .select("firstName lastName email phone status createdAt role")
+        .select(
+          "profileImage firstName lastName email phone status createdAt role",
+        )
         .sort({
           createdAt: -1,
         })
@@ -502,9 +505,12 @@ export const assignRolesResponsibility = async (
 
   try {
     session.startTransaction();
-    const assignedBy = req.user?.id;
+    const assignedBy = req.user?.id as string;
     const {
       userId,
+      role,
+      employmentType,
+      probationPeriod,
       policyId,
       payslipId,
       salary,
@@ -640,16 +646,64 @@ export const assignRolesResponsibility = async (
       }
     }
 
+    //other fields
+    if (!user.employmentType || user.employmentType !== employmentType) {
+      user.employmentType = employmentType;
+      operations.push(
+        addUserHistory(
+          {
+            userId,
+            field: "employmentType",
+            fieldValue: employmentType,
+            remarks,
+            assignedBy,
+          },
+          session,
+        ),
+      );
+    }
+    if (
+      typeof user.probationPeriod !== "number" ||
+      user.probationPeriod !== probationPeriod
+    ) {
+      user.probationPeriod = probationPeriod;
+      operations.push(
+        addUserHistory(
+          {
+            userId,
+            field: "probationPeriod",
+            fieldValue: probationPeriod,
+            remarks,
+            assignedBy,
+          },
+          session,
+        ),
+      );
+    }
+    if (user.role !== role) {
+      user.role = role;
+      operations.push(
+        addUserHistory(
+          { userId, field: "role", fieldValue: role, remarks, assignedBy },
+          session,
+        ),
+      );
+    }
+    
+    // user status
+    if (user.status === "PENDING") {
+      user.status = "ACTIVE" as userStatus;
+    }
+
     // Execute all DB operations together
     await Promise.all(operations);
+    await user.save();
 
     await session.commitTransaction();
 
     return res
       .status(200)
-      .json(
-        ApiResponse.success(null, "Policy and payslip assigned successfully"),
-      );
+      .json(ApiResponse.success(null, "Data assigned successfully"));
   } catch (error) {
     await session.abortTransaction();
     next(error);
