@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { authenticateUser } from "../../middleware/user.middleware.js";
-import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   assignRolesResponsibility,
   createEmployee,
   getBranchShiftDepartmentList,
+  getEmployDetailById,
   getEmployeeCount,
   getEmployeeList,
   getOnboardCompanyInfo,
@@ -71,10 +71,10 @@ router.put(
   //   updateEmployeeProfile,
 );
 
-// router.get(
-//     "//:userId",
-//     getEmployeeDetail
-// );
+router.get(
+    "/:userId",
+    getEmployDetailById
+);
 
 router.get("/", authenticateUser, getEmployeeList);
 

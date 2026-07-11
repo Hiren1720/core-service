@@ -216,6 +216,30 @@ export const createEmployee = async (
   }
 };
 
+export const getEmployDetailById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await UserModel.findById(userId).lean();
+    const userDetails = await UserDetailModel.findOne({ userId }).lean();
+
+     return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          { user, userDetails },
+          "Employee fetched successfully",
+        ),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getEmployeeList = async (
   req: Request,
   res: Response,
