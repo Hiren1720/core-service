@@ -108,6 +108,10 @@ const UserDetailSchema = new Schema(
           enum: ["adhar", "pan", "voterId", "passport"],
           default: "",
         },
+        cardNumber: {
+          type: Number,
+          default: null,
+        },
         front: { type: String, default: "" },
         back: { type: String, default: "" },
       },

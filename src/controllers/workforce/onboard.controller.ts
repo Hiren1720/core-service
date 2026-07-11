@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import {
+  UserPayslipModel,
+  UserAssignmentModel,
   UserDetailModel,
   UserModel,
+  UserPolicyModel,
+  CompanyModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
@@ -165,7 +169,8 @@ export const createEmployee = async (
           })),
           documents: parsedDocuments.map((item: any, index: number) => ({
             card: item.card,
-
+            cardNumber: item.cardNumber,
+            
             front: files?.[`documents[${index}][front]`]?.[0]
               ? saveFile({
                   file: files[`documents[${index}][front]`][0],
@@ -295,6 +300,32 @@ export const getEmployeeCount = async (
         "Employee counts fetched successfully",
       ),
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getOnboardCompanyInfo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await CompanyModel.findById(companyId).select(
+      "companyName companyEmail companyLogo companyAddress",
+    );
+
+    if (!company) {
+      return res.status(404).json(ApiResponse.error("Company not found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(company, "Employee counts fetched successfully"),
+      );
   } catch (error) {
     next(error);
   }
@@ -459,5 +490,170 @@ export const editUserDetail = async (
       .json(ApiResponse.success(null, "User detail saved successfully"));
   } catch (error) {
     next(error);
+  }
+};
+
+export const assignRolesResponsibility = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+    const assignedBy = req.user?.id;
+    const {
+      userId,
+      policyId,
+      payslipId,
+      salary,
+      assignments,
+      remarks = "",
+    } = req.body;
+
+    const user = await UserModel.findById(userId).session(session);
+
+    if (!user) {
+      await session.abortTransaction();
+
+      return res.status(404).json(ApiResponse.error("User not found"));
+    }
+
+    // Fetch current active records in parallel
+    const [currentPolicy, currentPayslip, existingAssignment] =
+      await Promise.all([
+        UserPolicyModel.findOne({
+          userId,
+        })
+          .sort({ createdAt: -1 })
+          .session(session),
+
+        UserPayslipModel.findOne({
+          userId,
+        })
+          .sort({ createdAt: -1 })
+          .session(session),
+
+        await UserAssignmentModel.findOne({
+          userId,
+        })
+          .sort({ createdAt: -1 })
+          .session(session),
+      ]);
+
+    const operations: Promise<any>[] = [];
+
+    // Policy
+    if (
+      policyId &&
+      (!currentPolicy || currentPolicy.policyId.toString() !== policyId)
+    ) {
+      operations.push(
+        UserPolicyModel.create(
+          [
+            {
+              userId,
+              policyId,
+              remarks,
+              assignedBy,
+            },
+          ],
+          { session },
+        ),
+      );
+    }
+
+    // Payslip
+    if (
+      (salary || payslipId) &&
+      (!currentPayslip ||
+        currentPayslip.salary !== Number(salary) ||
+        currentPayslip.payslipId.toString() !== payslipId)
+    ) {
+      operations.push(
+        UserPayslipModel.create(
+          [
+            {
+              userId,
+              salary,
+              payslipId,
+              remarks,
+              assignedBy,
+            },
+          ],
+          { session },
+        ),
+      );
+    }
+
+    // Assignments
+    if (!existingAssignment) {
+      operations.push(
+        UserAssignmentModel.create(
+          [
+            {
+              userId,
+              assignments: assignments.map((item: any) => ({
+                ...item,
+                assignedBy,
+                joinedAt: new Date(),
+              })),
+            },
+          ],
+          { session },
+        ),
+      );
+    } else {
+      // Compare only required fields
+      const isSame = existingAssignment.assignments.some((oldAssignment: any) =>
+        assignments.some(
+          (newAssignment: any) =>
+            oldAssignment.branchId.toString() === newAssignment.branchId &&
+            oldAssignment.shiftId.toString() === newAssignment.shiftId &&
+            oldAssignment.departmentId.toString() ===
+              newAssignment.departmentId &&
+            oldAssignment.designationId.toString() ===
+              newAssignment.designationId &&
+            (oldAssignment.reportingManagerId?.toString() || "") ===
+              (newAssignment.reportingManagerId || "") &&
+            oldAssignment.isReporting === newAssignment.isReporting,
+        ),
+      );
+
+      if (!isSame) {
+        operations.push(
+          UserAssignmentModel.create(
+            [
+              {
+                userId,
+                assignments: assignments.map((item: any) => ({
+                  ...item,
+                  assignedBy,
+                  joinedAt: new Date(),
+                })),
+              },
+            ],
+            { session },
+          ),
+        );
+      }
+    }
+
+    // Execute all DB operations together
+    await Promise.all(operations);
+
+    await session.commitTransaction();
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(null, "Policy and payslip assigned successfully"),
+      );
+  } catch (error) {
+    await session.abortTransaction();
+    next(error);
+  } finally {
+    await session.endSession();
   }
 };
