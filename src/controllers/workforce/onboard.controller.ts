@@ -927,3 +927,40 @@ export const getBranchShiftDepartmentList = async (
     next(error);
   }
 };
+
+export const updateUserStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
+
+    const user = await UserModel.findOne({
+      _id: req.params.userId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("User not found"));
+    }
+
+    user.status = status;
+
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "userStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
+    await user.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};

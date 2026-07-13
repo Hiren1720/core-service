@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { BranchModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createBranch = async (
   req: Request,
@@ -182,7 +183,8 @@ export const updateBranchStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const branch = await BranchModel.findOne({
       _id: req.params.branchId,
@@ -195,6 +197,13 @@ export const updateBranchStatus = async (
 
     branch.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "branchStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await branch.save();
 
     return res

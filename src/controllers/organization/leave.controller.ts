@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { LeaveModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createLeave = async (
   req: Request,
@@ -177,7 +178,8 @@ export const updateLeaveStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const leave = await LeaveModel.findOne({
       _id: req.params.leaveId,
@@ -190,6 +192,13 @@ export const updateLeaveStatus = async (
 
     leave.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "leaveStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await leave.save();
 
     return res

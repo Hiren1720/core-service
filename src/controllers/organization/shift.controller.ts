@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ShiftModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createShift = async (
   req: Request,
@@ -169,7 +170,8 @@ export const updateShiftStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const shift = await ShiftModel.findOne({
       _id: req.params.shiftId,
@@ -182,6 +184,13 @@ export const updateShiftStatus = async (
 
     shift.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "shiftStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await shift.save();
 
     return res

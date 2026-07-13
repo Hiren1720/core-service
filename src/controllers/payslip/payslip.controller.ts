@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { PayslipModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createPayslip = async (
   req: Request,
@@ -174,7 +175,8 @@ export const updatePayslipStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const payslip = await PayslipModel.findOne({
       _id: req.params.payslipId,
@@ -187,6 +189,13 @@ export const updatePayslipStatus = async (
 
     payslip.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "payslipStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await payslip.save();
 
     return res

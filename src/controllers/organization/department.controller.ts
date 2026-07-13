@@ -6,6 +6,7 @@ import {
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createDepartment = async (
   req: Request,
@@ -159,7 +160,8 @@ export const updateDepartmentStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const department = await DepartmentModel.findOne({
       _id: req.params.departmentId,
@@ -172,6 +174,13 @@ export const updateDepartmentStatus = async (
 
     department.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "departmentStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await department.save();
 
     return res

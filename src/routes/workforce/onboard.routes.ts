@@ -8,8 +8,10 @@ import {
   getEmployeeCount,
   getEmployeeList,
   getOnboardCompanyInfo,
+  updateUserStatus,
 } from "../../controllers/workforce/onboard.controller.js";
 import { upload } from "../../middleware/upload.middleware.js";
+import { authorize } from "../../middleware/authorize.middleware.js";
 
 const router = Router();
 
@@ -89,9 +91,12 @@ router.get(
   getBranchShiftDepartmentList,
 );
 
-router.get(
-    "/:userId",
-    getEmployDetailById
-);
+router.get("/:userId", getEmployDetailById);
 
+router.patch(
+  "/status/:userId",
+  authenticateUser,
+  authorize("OWNER"),
+  updateUserStatus,
+);
 export default router;

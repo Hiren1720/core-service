@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { PolicyModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createPolicy = async (
   req: Request,
@@ -175,7 +176,8 @@ export const updatePolicyStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const policy = await PolicyModel.findOne({
       _id: req.params.policyId,
@@ -188,6 +190,13 @@ export const updatePolicyStatus = async (
 
     policy.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "policyStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await policy.save();
 
     return res

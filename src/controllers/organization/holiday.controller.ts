@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { HolidayModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createHoliday = async (
   req: Request,
@@ -197,7 +198,8 @@ export const updateHolidayStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const holiday = await HolidayModel.findOne({
       _id: req.params.holidayId,
@@ -210,6 +212,13 @@ export const updateHolidayStatus = async (
 
     holiday.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "holidayStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await holiday.save();
 
     return res

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { DesignationModel } from "../../infrastructure/database/models";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const createDesignation = async (
   req: Request,
@@ -145,7 +146,8 @@ export const updateDesignationStatus = async (
   next: NextFunction,
 ) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
 
     const designation = await DesignationModel.findOne({
       _id: req.params.designationId,
@@ -158,6 +160,13 @@ export const updateDesignationStatus = async (
 
     designation.status = status;
 
+    await addUserHistory({
+      userId: req.params.userId as string,
+      field: "designationStatus",
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
     await designation.save();
 
     return res
