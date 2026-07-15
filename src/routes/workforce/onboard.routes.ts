@@ -44,35 +44,6 @@ router.post(
   createEmployee,
 );
 
-router.put(
-  "/:userId",
-  upload.fields([
-    {
-      name: "profileImage",
-      maxCount: 1,
-    },
-    { name: "documents[0][front]", maxCount: 1 },
-    { name: "documents[0][back]", maxCount: 1 },
-    { name: "documents[1][front]", maxCount: 1 },
-    { name: "documents[1][back]", maxCount: 1 },
-    { name: "documents[2][front]", maxCount: 1 },
-    { name: "documents[2][back]", maxCount: 1 },
-    { name: "educations[0][document]", maxCount: 1 },
-    { name: "educations[0][document]", maxCount: 1 },
-    { name: "educations[1][document]", maxCount: 1 },
-    { name: "educations[1][document]", maxCount: 1 },
-    { name: "educations[2][document]", maxCount: 1 },
-    { name: "educations[2][document]", maxCount: 1 },
-    { name: "experiences[0][document]", maxCount: 1 },
-    { name: "experiences[0][document]", maxCount: 1 },
-    { name: "experiences[1][document]", maxCount: 1 },
-    { name: "experiences[1][document]", maxCount: 1 },
-    { name: "experiences[2][document]", maxCount: 1 },
-    { name: "experiences[2][document]", maxCount: 1 },
-  ]),
-  //   updateEmployeeProfile,
-);
-
 router.get("/", authenticateUser, getEmployeeList);
 
 router.get("/count", authenticateUser, getEmployeeCount);
