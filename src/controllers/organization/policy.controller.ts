@@ -1,27 +1,148 @@
 import { NextFunction, Request, Response } from "express";
+import mongoose from "mongoose";
 import { ApiResponse } from "../../shared/response/api-response";
-import { PolicyModel } from "../../infrastructure/database/models";
-import { status } from "../../types/types";
+import { LeaveModel, PolicyModel } from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { status } from "../../types/types";
 
-export const createPolicy = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const createPolicy = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+
   try {
-    const { name } = req.body;
+    session.startTransaction();
 
-    const policy = await PolicyModel.create({
-      companyId: req.user!.companyId,
-      name,
+    const companyId = req.user!.companyId;
+    const { name, leaves = [], ...payload } = req.body;
+
+    const policyExists = await PolicyModel.exists({
+      companyId,
+      name: name.trim(),
     });
+    console.log("policyExists", policyExists);
+
+    if (policyExists) {
+      await session.abortTransaction();
+
+      return res
+        .status(409)
+        .json(ApiResponse.error("Policy with same name already exists."));
+    }
+
+    if (leaves.length) {
+      const leaveIds = leaves.map((x: any) => x.leaveId);
+
+      const count = await LeaveModel.countDocuments({
+        _id: { $in: leaveIds },
+      });
+
+      if (count !== leaveIds.length) {
+        await session.abortTransaction();
+
+        return res
+          .status(400)
+          .json(ApiResponse.error("One or more leave types are invalid."));
+      }
+    }
+
+    const policy = await PolicyModel.create(
+      [
+        {
+          companyId,
+          name: name.trim(),
+          leaves,
+          ...payload,
+        },
+      ],
+      { session },
+    );
+
+    await session.commitTransaction();
 
     return res
       .status(201)
-      .json(ApiResponse.success(policy, "Policy created successfully"));
+      .json(ApiResponse.success(policy[0], "Policy created successfully."));
   } catch (error) {
-    next(error);
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+export const updatePolicy = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const companyId = req.user!.companyId;
+    const { policyId } = req.params;
+
+    const { name, leaves = [], ...payload } = req.body;
+
+    const policy = await PolicyModel.findOne({
+      _id: policyId,
+      companyId,
+    });
+
+    if (!policy) {
+      await session.abortTransaction();
+
+      return res.status(404).json(ApiResponse.error("Policy not found."));
+    }
+
+    if (name) {
+      const duplicate = await PolicyModel.exists({
+        _id: { $ne: policyId },
+        companyId,
+        name: name.trim(),
+      });
+
+      if (duplicate) {
+        await session.abortTransaction();
+
+        return res
+          .status(409)
+          .json(ApiResponse.error("Policy name already exists."));
+      }
+    }
+
+    if (leaves.length) {
+      const leaveIds = leaves.map((x: any) => x.leaveId);
+
+      const count = await LeaveModel.countDocuments({
+        _id: {
+          $in: leaveIds,
+        },
+      });
+
+      if (count !== leaveIds.length) {
+        await session.abortTransaction();
+
+        return res
+          .status(400)
+          .json(ApiResponse.error("One or more leave types are invalid."));
+      }
+    }
+
+    Object.assign(policy, {
+      ...payload,
+      ...(name && { name: name.trim() }),
+      leaves,
+    });
+
+    await policy.save({ session });
+
+    await session.commitTransaction();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(policy, "Policy updated successfully."));
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
 };
 
@@ -132,39 +253,6 @@ export const getPolicyById = async (
     return res
       .status(200)
       .json(ApiResponse.success(policy, "Policy fetched successfully"));
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const updatePolicy = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const policy = await PolicyModel.findOne({
-      _id: req.params.policyId,
-      companyId: req.user!.companyId,
-    });
-
-    if (!policy) {
-      return res.status(404).json(ApiResponse.error("Policy not found"));
-    }
-
-    const { name, description, isPaid } = req.body;
-
-    if (name !== undefined) policy.name = name;
-
-    // if (description !== undefined) policy.description = description;
-
-    // if (isPaid !== undefined) policy.isPaid = isPaid;
-
-    await policy.save();
-
-    return res
-      .status(200)
-      .json(ApiResponse.success(null, "Policy updated successfully"));
   } catch (error) {
     next(error);
   }

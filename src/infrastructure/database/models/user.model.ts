@@ -90,7 +90,7 @@ const UserSchema = new Schema(
     },
     designationId: {
       type: Schema.Types.ObjectId,
-      ref: "Department",
+      ref: "Designation",
       default: null,
     },
     employmentType: {

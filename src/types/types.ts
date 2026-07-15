@@ -24,3 +24,9 @@ export enum employmentTypeType {
   INTERN = "INTERN",
   CONSULTANT = "CONSULTANT",
 }
+
+export enum leaveEncashmentType {
+  YEARLY = "YEARLY",
+  FULL_FINAL = "FULL_FINAL",
+}
+

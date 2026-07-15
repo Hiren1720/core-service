@@ -7,7 +7,6 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
 import { status } from "../../types/types";
 
-
 export const editUserDetail = async (
   req: Request,
   res: Response,
@@ -148,7 +147,6 @@ export const editUserDetail = async (
   }
 };
 
-
 export const getEmployeeList = async (
   req: Request,
   res: Response,
@@ -167,6 +165,7 @@ export const getEmployeeList = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      role: { $ne: "OWNER" },
     };
 
     if (search) {
@@ -182,10 +181,11 @@ export const getEmployeeList = async (
 
     const [employee, total] = await Promise.all([
       UserModel.find(filter)
-      .select("firstName lastName role profileImage")
-      .populate("branchId", "name")
-      .populate("shiftId", "name startTime endTime")
-      .populate("designationId", "name")
+        .select("firstName lastName role profileImage status")
+        .populate("branchId", "name")
+        .populate("shiftId", "name startTime endTime")
+        .populate("designationId", "name")
+        .populate("departmentId", "name")
         .sort({
           createdAt: -1,
         })

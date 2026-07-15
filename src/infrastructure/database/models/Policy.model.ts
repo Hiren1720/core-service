@@ -1,42 +1,5 @@
 import { Schema, model } from "mongoose";
-import { status } from "../../../types/types";
-
-/* ---------------- Attendance ---------------- */
-
-const AttendanceSchema = new Schema(
-  {
-    enableAttendance: {
-      type: Boolean,
-      default: true,
-    },
-
-    biometricRequired: {
-      type: Boolean,
-      default: false,
-    },
-
-    selfieRequired: {
-      type: Boolean,
-      default: false,
-    },
-
-    locationRequired: {
-      type: Boolean,
-      default: false,
-    },
-
-    allowRegularization: {
-      type: Boolean,
-      default: true,
-    },
-
-    regularizationDays: {
-      type: Number,
-      default: 3,
-    },
-  },
-  { _id: false },
-);
+import { leaveEncashmentType, status } from "../../../types/types";
 
 /* ---------------- Work Hours ---------------- */
 const WorkHourSchema = new Schema(
@@ -65,7 +28,11 @@ const WorkHourSchema = new Schema(
           "WEDNESDAY",
           "THURSDAY",
           "FRIDAY",
-          "SATURDAY",
+          "1stSATURDAY",
+          "2ndSATURDAY",
+          "3rdSATURDAY",
+          "4thSATURDAY",
+          "5thSATURDAY",
           "SUNDAY",
         ],
       },
@@ -87,12 +54,12 @@ const WorkHourSchema = new Schema(
 /* ---------------- Late Rules ---------------- */
 const LateRuleSchema = new Schema(
   {
-    graceLoginMinutes: {
+    graceLoginAfterMinutes: {
       type: Number,
       default: 15,
     },
 
-    graceLogoutMinutes: {
+    graceLoginBeforeMinutes: {
       type: Number,
       default: 15,
     },
@@ -150,71 +117,20 @@ const OvertimeSchema = new Schema(
   { _id: false },
 );
 
-/* ---------------- Leave ---------------- */
-const LeaveSchema = new Schema(
+/* ---------------- Sandwich Rule ---------------- */
+const SandwichRuleSchema = new Schema(
   {
-    name: {
-      type: String,
-      required: true,
-    },
-
-    shortName: {
-      type: String,
-      required: true,
-    },
-
-    yearlyLimit: {
-      type: Number,
-      default: 0,
-    },
-
-    carryForward: {
+    enabled: {
       type: Boolean,
       default: false,
     },
 
-    maxCarryForward: {
-      type: Number,
-      default: 0,
-    },
-
-    encashable: {
+    beforeAfterWeekOff: {
       type: Boolean,
       default: false,
     },
 
-    allowHalfDay: {
-      type: Boolean,
-      default: true,
-    },
-
-    minimumNoticeDays: {
-      type: Number,
-      default: 0,
-    },
-
-    approvalRequired: {
-      type: Boolean,
-      default: true,
-    },
-
-    paid: {
-      type: Boolean,
-      default: true,
-    },
-  },
-  { _id: false },
-);
-
-/* ---------------- Holiday ---------------- */
-const HolidaySchema = new Schema(
-  {
-    weekendIncludedInLeave: {
-      type: Boolean,
-      default: false,
-    },
-
-    holidayIncludedInLeave: {
+    beforeAfterHoliday: {
       type: Boolean,
       default: false,
     },
@@ -222,48 +138,93 @@ const HolidaySchema = new Schema(
   { _id: false },
 );
 
-/* ---------------- Approval ---------------- */
-const ApprovalSchema = new Schema(
+/* ---------------- leave Encashment ---------------- */
+const LeaveEncashmentSchema = new Schema(
   {
-    reportingManagerRequired: {
-      type: Boolean,
-      default: true,
-    },
-
-    hrApprovalRequired: {
+    enabled: {
       type: Boolean,
       default: false,
     },
 
-    directorApprovalRequired: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  { _id: false },
-);
-
-/* ---------------- Payroll ---------------- */
-const PayrollSchema = new Schema(
-  {
-    salaryCycleDay: {
+    maxLeaves: {
       type: Number,
       default: 1,
     },
 
-    overtimePaid: {
+    period: {
+      type: String,
+      enum: Object.values(leaveEncashmentType),
+      default: leaveEncashmentType.YEARLY,
+    },
+  },
+  { _id: false },
+);
+
+/* ---------------- Carry forward leave ---------------- */
+const CarryForwardLeaveSchema = new Schema(
+  {
+    enabled: {
       type: Boolean,
       default: false,
     },
 
-    deductLateComing: {
+    maxLeaves: {
+      type: Number,
+      default: 1,
+    },
+  },
+  { _id: false },
+);
+
+/* ---------------- Continuous Leave ---------------- */
+const ContinuousLeaveSchema = new Schema(
+  {
+    enabled: {
       type: Boolean,
       default: false,
     },
 
-    deductEarlyLeaving: {
+    maxLeaves: {
+      type: Number,
+      default: 1,
+    },
+
+    allowedInProbation: {
       type: Boolean,
       default: false,
+    },
+  },
+  { _id: false },
+);
+
+/* ---------------- Leave ---------------- */
+const LeaveSchema = new Schema(
+  {
+    leaveId: {
+      type: Schema.Types.ObjectId,
+      ref: "Leave",
+      required: true,
+    },
+
+    hoursBeforeLeave: {
+      type: Number,
+      default: 24,
+    },
+  },
+  { _id: false },
+);
+
+/* ---------------- Manual Punch ---------------- */
+const ManualPunchSchema = new Schema(
+  {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+
+    limit: {
+      type: Number,
+      default: 1,
     },
   },
   { _id: false },
@@ -285,42 +246,21 @@ const PolicySchema = new Schema(
       trim: true,
     },
 
-    // attendance: AttendanceSchema,
-
-    workHours: WorkHourSchema,
-
-    lateRule: LateRuleSchema,
-
-    overtime: OvertimeSchema,
-
-    leaves: {
-      type: [LeaveSchema],
-      default: [],
-    },
-
-    holidays: HolidaySchema,
-
-    approval: ApprovalSchema,
-
-    payroll: PayrollSchema,
-
     status: {
       type: String,
       enum: Object.values(status),
       default: status.ACTIVE,
     },
 
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
+    workHours: WorkHourSchema,
+    lateRule: LateRuleSchema,
+    overtime: OvertimeSchema,
+    sandwichRule: SandwichRuleSchema,
+    leaveEncashment: LeaveEncashmentSchema,
+    carryForwardLeave: CarryForwardLeaveSchema,
+    continuousLeave: ContinuousLeaveSchema,
+    leaves: [LeaveSchema],
+    manualPunch: ManualPunchSchema,
   },
   {
     timestamps: true,
@@ -332,15 +272,5 @@ PolicySchema.index({
   companyId: 1,
   name: 1,
 });
-
-PolicySchema.index(
-  {
-    companyId: 1,
-    name: 1,
-  },
-  {
-    unique: true,
-  },
-);
 
 export const PolicyModel = model("Policy", PolicySchema);
