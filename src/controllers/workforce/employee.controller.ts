@@ -5,7 +5,7 @@ import {
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
-import { status } from "../../types/types";
+import { status, userStatus } from "../../types/types";
 
 export const editUserDetail = async (
   req: Request,
@@ -166,6 +166,7 @@ export const getEmployeeList = async (
     const filter: any = {
       companyId: req.user!.companyId,
       role: { $ne: "OWNER" },
+      status: { $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED] },
     };
 
     if (search) {
