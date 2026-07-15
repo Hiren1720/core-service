@@ -709,56 +709,59 @@ export const getBranchShiftDepartmentList = async (
       }
     }
 
-    const data = branches.map((branch: any) => {
-      const branchShifts = shifts
-        .filter((shift: any) =>
-          shift.branchIds.some(
-            (id: any) => id.toString() === branch._id.toString(),
-          ),
-        )
-        .map((shift: any) => {
-          const shiftDepartments = departments
-            .filter((department: any) =>
-              department.assignments.some(
-                (assignment: any) =>
-                  assignment.branchId.toString() === branch._id.toString() &&
-                  assignment.shiftIds.some(
-                    (id: any) => id.toString() === shift._id.toString(),
-                  ),
-              ),
-            )
-            .map((department: any) => ({
-              _id: department._id,
-              name: department.name,
-              count:
-                departmentCountMap.get(
+    const data = branches
+      .map((branch: any) => {
+        const branchShifts = shifts
+          .filter((shift: any) =>
+            shift.branchIds.some(
+              (id: any) => id.toString() === branch._id.toString(),
+            ),
+          )
+          .map((shift: any) => {
+            const shiftDepartments = departments
+              .filter((department: any) =>
+                department.assignments.some(
+                  (assignment: any) =>
+                    assignment.branchId.toString() === branch._id.toString() &&
+                    assignment.shiftIds.some(
+                      (id: any) => id.toString() === shift._id.toString(),
+                    ),
+                ),
+              )
+              .map((department: any) => ({
+                _id: department._id,
+                name: department.name,
+                count:
+                  departmentCountMap.get(
+                    `${branch._id}_${shift._id}_${department._id}`,
+                  ) || 0,
+                manager: departmentManagerMap.get(
                   `${branch._id}_${shift._id}_${department._id}`,
-                ) || 0,
-              manager: departmentManagerMap.get(
-                `${branch._id}_${shift._id}_${department._id}`,
-              ),
-            }));
+                ),
+              }));
 
-          return {
-            _id: shift._id,
-            name: shift.name,
-            startTime: shift.startTime,
-            endTime: shift.endTime,
-            breakStartTime: shift.breakStartTime,
-            breakEndTime: shift.breakEndTime,
-            departments: shiftDepartments,
-            count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
-          };
-        });
+            return {
+              _id: shift._id,
+              name: shift.name,
+              startTime: shift.startTime,
+              endTime: shift.endTime,
+              breakStartTime: shift.breakStartTime,
+              breakEndTime: shift.breakEndTime,
+              departments: shiftDepartments,
+              count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
+            };
+          })
+          .filter((shift: any) => shift.departments.length > 0);
 
-      return {
-        _id: branch._id,
-        name: branch.name,
-        shifts: branchShifts,
-        address: branch.address,
-        count: branchCountMap.get(branch._id.toString()) || 0,
-      };
-    });
+        return {
+          _id: branch._id,
+          name: branch.name,
+          shifts: branchShifts,
+          address: branch.address,
+          count: branchCountMap.get(branch._id.toString()) || 0,
+        };
+      })
+      .filter((branch: any) => branch.branchShifts.length > 0);
 
     return res
       .status(200)
