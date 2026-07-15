@@ -615,7 +615,9 @@ export const getBranchShiftDepartmentList = async (
         companyId,
         status: status.ACTIVE,
       })
-        .select("_id name branchIds startTime endTime")
+        .select(
+          "_id name branchIds startTime endTime breakStartTime breakEndTime",
+        )
         .lean(),
 
       DepartmentModel.find({
@@ -742,6 +744,8 @@ export const getBranchShiftDepartmentList = async (
             name: shift.name,
             startTime: shift.startTime,
             endTime: shift.endTime,
+            breakStartTime: shift.breakStartTime,
+            breakEndTime: shift.breakEndTime,
             departments: shiftDepartments,
             count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
           };
