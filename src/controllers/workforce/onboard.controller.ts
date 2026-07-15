@@ -761,7 +761,7 @@ export const getBranchShiftDepartmentList = async (
           count: branchCountMap.get(branch._id.toString()) || 0,
         };
       })
-      .filter((branch: any) => branch.branchShifts.length > 0);
+      .filter((branch: any) => branch.shifts.length > 0);
 
     return res
       .status(200)
