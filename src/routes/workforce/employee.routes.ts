@@ -2,7 +2,11 @@ import { Router } from "express";
 import { authenticateUser } from "../../middleware/user.middleware.js";
 
 import { upload } from "../../middleware/upload.middleware.js";
-import { editUserDetail } from "../../controllers/workforce/employee.controller.js";
+import {
+  editUserDetail,
+  getEmployeeCount,
+  getEmployeeList,
+} from "../../controllers/workforce/employee.controller.js";
 
 const router = Router();
 
@@ -18,5 +22,8 @@ router.put(
   editUserDetail,
 );
 
+router.get("/", authenticateUser, getEmployeeList);
+
+router.get("/count", authenticateUser, getEmployeeCount);
 
 export default router;

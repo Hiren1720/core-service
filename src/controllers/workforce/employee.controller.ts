@@ -5,6 +5,7 @@ import {
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
+import { status } from "../../types/types";
 
 
 export const editUserDetail = async (
@@ -142,6 +143,100 @@ export const editUserDetail = async (
     return res
       .status(200)
       .json(ApiResponse.success(null, "User detail saved successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const getEmployeeList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.toString() || "";
+
+    const status = req.query.status?.toString();
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
+    if (search) {
+      filter.firstName = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const [employee, total] = await Promise.all([
+      UserModel.find(filter)
+      .select("firstName lastName role profileImage")
+      .populate("branchId", "name")
+      .populate("shiftId", "name startTime endTime")
+      .populate("designationId", "name")
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      UserModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          employee,
+          total,
+        },
+        "Employee fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmployeeCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
+    const [active, inactive, deleted] = await Promise.all([
+      UserModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
+      UserModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
+      UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          total: active + inactive + deleted,
+          active,
+          inactive,
+          deleted,
+        },
+        "Employee counts fetched successfully",
+      ),
+    );
   } catch (error) {
     next(error);
   }
