@@ -205,6 +205,10 @@ const LeaveSchema = new Schema(
       ref: "Leave",
       required: true,
     },
+    limit: {
+      type: Number,
+      default: 1,
+    },
 
     hoursBeforeLeave: {
       type: Number,
