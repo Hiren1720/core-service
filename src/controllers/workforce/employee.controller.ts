@@ -222,7 +222,7 @@ export const getEmployeeCount = async (
     };
 
     const [active, inactive, deleted] = await Promise.all([
-      UserModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
+      UserModel.countDocuments({ ...filter, status: "ACTIVE" as status, role: { $ne: "OWNER" } }),
       UserModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
       UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
