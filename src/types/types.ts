@@ -13,6 +13,12 @@ export enum userStatus {
   DELETED = "DELETED",
 }
 
+export enum expenseStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
 export enum payslipValueType {
   PERCENTAGE = "PERCENTAGE",
   FIXED = "FIXED",

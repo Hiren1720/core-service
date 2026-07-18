@@ -198,7 +198,7 @@ export const updateBranchStatus = async (
     branch.status = status;
 
     await addUserHistory({
-      userId: req.params.userId as string,
+      userId: req.user!.id as string,
       field: "branchStatus",
       fieldValue: status,
       remarks,

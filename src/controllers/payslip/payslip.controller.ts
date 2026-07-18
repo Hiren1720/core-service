@@ -190,7 +190,7 @@ export const updatePayslipStatus = async (
     payslip.status = status;
 
     await addUserHistory({
-      userId: req.params.userId as string,
+      userId: req.user!.id as string,
       field: "payslipStatus",
       fieldValue: status,
       remarks,

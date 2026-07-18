@@ -9,6 +9,7 @@ import { HolidayModel } from "./holiday.model.js";
 import { LeaveModel } from "./leave.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
+import { ReimbursementModel } from "./reimbursement.model.js";
 import { ShiftModel } from "./shift.model.js";
 import { UserModel } from "./user.model.js";
 import { UserAssignmentModel } from "./userAssignment.model.js";
@@ -30,6 +31,7 @@ export {
   LeaveModel,
   PayslipModel,
   PolicyModel,
+  ReimbursementModel,
   ShiftModel,
   UserAssignmentModel,
   UserModel,

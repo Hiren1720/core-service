@@ -193,7 +193,7 @@ export const updateLeaveStatus = async (
     leave.status = status;
 
     await addUserHistory({
-      userId: req.params.userId as string,
+      userId: req.user!.id as string,
       field: "leaveStatus",
       fieldValue: status,
       remarks,

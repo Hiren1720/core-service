@@ -175,7 +175,7 @@ export const updateDepartmentStatus = async (
     department.status = status;
 
     await addUserHistory({
-      userId: req.params.userId as string,
+      userId: req.user!.id as string,
       field: "departmentStatus",
       fieldValue: status,
       remarks,
