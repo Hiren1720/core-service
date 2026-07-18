@@ -229,9 +229,7 @@ export const myManagedBranchList = async (
     if (role === "OWNER") {
       const branches = await BranchModel.find({
         companyId: req.user!.companyId,
-        status: {
-          $ne: "ACTIVE" as status,
-        },
+        status: "ACTIVE" as status,
       }).lean();
 
       return res.status(200).json(
