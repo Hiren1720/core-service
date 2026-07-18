@@ -163,7 +163,7 @@ export const getReimbursementsCount = async (
 ) => {
   try {
     const filter: any = {
-      companyId: req.user!.companyId,
+      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
     };
 
     const month = req.query.month ? Number(req.query.month) : undefined;
@@ -176,7 +176,14 @@ export const getReimbursementsCount = async (
       };
     }
 
-    const [pending, approved, rejected] = await Promise.all([
+    const [
+      pending,
+      approved,
+      rejected,
+      pendingAmount,
+      approvedAmount,
+      rejectedAmount,
+    ] = await Promise.all([
       ReimbursementModel.countDocuments({
         ...filter,
         status: "PENDING" as expenseStatus,
@@ -189,6 +196,18 @@ export const getReimbursementsCount = async (
         ...filter,
         status: "REJECTED" as expenseStatus,
       }),
+      ReimbursementModel.aggregate([
+        { $match: { ...filter, status: "PENDING" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      ReimbursementModel.aggregate([
+        { $match: { ...filter, status: "APPROVED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      ReimbursementModel.aggregate([
+        { $match: { ...filter, status: "REJECTED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
     ]);
 
     return res.status(200).json(
@@ -198,6 +217,15 @@ export const getReimbursementsCount = async (
           pending,
           approved,
           rejected,
+          amount: {
+            pending: pendingAmount[0]?.totalAmount || 0,
+            approved: approvedAmount[0]?.totalAmount || 0,
+            rejected: rejectedAmount[0]?.totalAmount || 0,
+            total:
+              pendingAmount[0]?.totalAmount +
+              approvedAmount[0]?.totalAmount +
+              rejectedAmount[0]?.totalAmount,
+          },
         },
         "Reimbursement counts fetched successfully",
       ),
