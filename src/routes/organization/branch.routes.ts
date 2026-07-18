@@ -1,41 +1,32 @@
 import { Router } from "express";
 import { authenticateUser } from "../../middleware/user.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
-import { createBranch, getBranchById, getBranches, updateBranch, updateBranchStatus } from "../../controllers/organization/branch.controller.js";
+import {
+  createBranch,
+  getBranchById,
+  getBranches,
+  myManagedBranchList,
+  updateBranch,
+  updateBranchStatus,
+} from "../../controllers/organization/branch.controller.js";
 
 const router = Router();
 
-router.post(
-    "/",
-    authenticateUser,
-    authorize("OWNER"),
-    createBranch
-);
+router.get("/my-managed", authenticateUser, myManagedBranchList);
 
-router.get(
-    "/",
-    authenticateUser,
-    getBranches
-);
+router.post("/", authenticateUser, authorize("OWNER"), createBranch);
 
-router.get(
-    "/:branchId",
-    authenticateUser,
-    getBranchById
-);
+router.get("/", authenticateUser, getBranches);
 
-router.put(
-    "/:branchId",
-    authenticateUser,
-    authorize("OWNER"),
-    updateBranch
-);
+router.get("/:branchId", authenticateUser, getBranchById);
+
+router.put("/:branchId", authenticateUser, authorize("OWNER"), updateBranch);
 
 router.patch(
-    "/status/:branchId",
-    authenticateUser,
-    authorize("OWNER"),
-    updateBranchStatus
+  "/status/:branchId",
+  authenticateUser,
+  authorize("OWNER"),
+  updateBranchStatus,
 );
 
 export default router;

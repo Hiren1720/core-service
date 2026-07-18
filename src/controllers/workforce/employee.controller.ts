@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import {
+  UserAssignmentModel,
   UserDetailModel,
   UserModel,
 } from "../../infrastructure/database/models";
@@ -166,7 +167,9 @@ export const getEmployeeList = async (
     const filter: any = {
       companyId: req.user!.companyId,
       role: { $ne: "OWNER" },
-      status: { $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED] },
+      status: {
+        $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+      },
     };
 
     if (search) {
@@ -222,7 +225,11 @@ export const getEmployeeCount = async (
     };
 
     const [active, inactive, deleted] = await Promise.all([
-      UserModel.countDocuments({ ...filter, status: "ACTIVE" as status, role: { $ne: "OWNER" } }),
+      UserModel.countDocuments({
+        ...filter,
+        status: "ACTIVE" as status,
+        role: { $ne: "OWNER" },
+      }),
       UserModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
       UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
@@ -238,6 +245,70 @@ export const getEmployeeCount = async (
         "Employee counts fetched successfully",
       ),
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const myManagedEmployeeList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    const branchId = req.query.branchId?.toString();
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+      status: "ACTIVE" as userStatus,
+      role: { $ne: "OWNER" },
+    };
+    if (branchId) {
+      filter["branchId"] = branchId;
+    }
+
+    if (role === "OWNER") {
+      const users = await UserModel.find(filter)
+        .select("firstName lastName role profileImage")
+        .lean();
+
+      return res
+        .status(200)
+        .json(ApiResponse.success(users, "Employees fetched successfully"));
+    }
+
+    const assignment = await UserAssignmentModel.findOne({
+      userId,
+    })
+      .sort({ createdAt: -1 })
+      .select("assignments")
+      .lean();
+
+    if (!assignment) {
+      return res.status(404).json(ApiResponse.error("No Employees found"));
+    }
+
+    const managesAssignments = assignment.assignments.filter(
+      (el) => !el.isReporting,
+    );
+
+    const managerFilter: any = {
+      branchId: { $in: managesAssignments.map((el) => el.branchId.toString()) },
+      shiftId: { $in: managesAssignments.map((el) => el.shiftId.toString()) },
+      departmentId: {
+        $in: managesAssignments.map((el) => el.departmentId.toString()),
+      },
+      ...filter,
+    };
+
+    const users = await UserModel.find(managerFilter)
+      .select("firstName lastName role profileImage")
+      .lean();
+    return res
+      .status(200)
+      .json(ApiResponse.success(users, "Employees fetched successfully"));
   } catch (error) {
     next(error);
   }

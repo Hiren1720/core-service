@@ -6,9 +6,12 @@ import {
   editUserDetail,
   getEmployeeCount,
   getEmployeeList,
+  myManagedEmployeeList,
 } from "../../controllers/workforce/employee.controller.js";
 
 const router = Router();
+
+router.get("/my-managed", authenticateUser, myManagedEmployeeList);
 
 router.put(
   "/:userId",

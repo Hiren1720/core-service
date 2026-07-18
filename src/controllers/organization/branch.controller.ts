@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { BranchModel } from "../../infrastructure/database/models";
+import {
+  BranchModel,
+  UserAssignmentModel,
+} from "../../infrastructure/database/models";
 import { status } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
@@ -209,6 +212,63 @@ export const updateBranchStatus = async (
     return res
       .status(200)
       .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const myManagedBranchList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user!.id;
+    const role = req.user!.role;
+
+    if (role === "OWNER") {
+      const branches = await BranchModel.find({
+        companyId: req.user!.companyId,
+        status: {
+          $ne: "ACTIVE" as status,
+        },
+      }).lean();
+
+      return res.status(200).json(
+        ApiResponse.success(
+          branches.map((el) => ({
+            branchId: el._id,
+            name: el.name,
+          })),
+          "Branches fetched successfully",
+        ),
+      );
+    }
+
+    const branches = await UserAssignmentModel.findOne({
+      userId,
+    })
+      .sort({ createdAt: -1 })
+      .populate("assignments.branchId", "name")
+      .lean();
+
+    if (!branches) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("No branches found for the user"));
+    }
+
+    return res.status(200).json(
+      ApiResponse.success(
+        branches.assignments
+          .filter((el) => !el.isReporting)
+          .map((el: any) => ({
+            branchId: el.branchId._id,
+            name: el.branchId.name,
+          })),
+        "Branches fetched successfully",
+      ),
+    );
   } catch (error) {
     next(error);
   }
