@@ -222,9 +222,9 @@ export const getReimbursementsCount = async (
             approved: approvedAmount[0]?.totalAmount || 0,
             rejected: rejectedAmount[0]?.totalAmount || 0,
             total:
-              pendingAmount[0]?.totalAmount +
-              approvedAmount[0]?.totalAmount +
-              rejectedAmount[0]?.totalAmount,
+              (pendingAmount[0]?.totalAmount || 0) +
+              (approvedAmount[0]?.totalAmount || 0) +
+              (rejectedAmount[0]?.totalAmount || 0),
           },
         },
         "Reimbursement counts fetched successfully",
