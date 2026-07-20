@@ -7,6 +7,7 @@ import { DepartmentModel } from "./department.model.js";
 import { DesignationModel } from "./designation.model.js";
 import { HolidayModel } from "./holiday.model.js";
 import { LeaveModel } from "./leave.model.js";
+import { OfficeExpenseModel } from "./officeExpense.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
 import { ReimbursementModel } from "./reimbursement.model.js";
@@ -29,6 +30,7 @@ export {
   DesignationModel,
   HolidayModel,
   LeaveModel,
+  OfficeExpenseModel,
   PayslipModel,
   PolicyModel,
   ReimbursementModel,
