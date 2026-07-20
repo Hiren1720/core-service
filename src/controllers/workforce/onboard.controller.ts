@@ -271,7 +271,13 @@ export const getEmployeeList = async (
     }
 
     if (status) {
-      filter.status = status;
+      if (status === "ACCEPTED") {
+        filter.status = {
+          $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+        };
+      } else {
+        filter.status = status;
+      }
     }
 
     const [employees, total] = await Promise.all([
@@ -315,7 +321,12 @@ export const getEmployeeCount = async (
 
     const [pending, accepted, rejected] = await Promise.all([
       UserModel.countDocuments({ ...filter, status: "PENDING" as userStatus }),
-      UserModel.countDocuments({ ...filter, status: "ACCEPTED" as userStatus }),
+      UserModel.countDocuments({
+        ...filter,
+        status: {
+          $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+        },
+      }),
       UserModel.countDocuments({ ...filter, status: "REJECTED" as userStatus }),
     ]);
 
