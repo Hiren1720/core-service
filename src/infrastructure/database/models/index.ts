@@ -10,6 +10,7 @@ import { LeaveModel } from "./leave.model.js";
 import { OfficeExpenseModel } from "./officeExpense.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
+import { PromotionModel } from "./promotion.model.js";
 import { ReimbursementModel } from "./reimbursement.model.js";
 import { ShiftModel } from "./shift.model.js";
 import { UserModel } from "./user.model.js";
@@ -33,6 +34,7 @@ export {
   OfficeExpenseModel,
   PayslipModel,
   PolicyModel,
+  PromotionModel,
   ReimbursementModel,
   ShiftModel,
   UserAssignmentModel,

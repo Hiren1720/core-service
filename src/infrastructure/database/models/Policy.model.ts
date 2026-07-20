@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { leaveEncashmentType, status } from "../../../types/types";
+import { leaveEncasementType, status } from "../../../types/types";
 
 /* ---------------- Work Hours ---------------- */
 const WorkHourSchema = new Schema(
@@ -153,8 +153,8 @@ const LeaveEncashmentSchema = new Schema(
 
     period: {
       type: String,
-      enum: Object.values(leaveEncashmentType),
-      default: leaveEncashmentType.YEARLY,
+      enum: Object.values(leaveEncasementType),
+      default: leaveEncasementType.YEARLY,
     },
   },
   { _id: false },

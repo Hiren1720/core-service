@@ -19,6 +19,12 @@ export enum expenseStatus {
   REJECTED = "REJECTED",
 }
 
+export enum promotionStatus {
+  PROMOTED = "PROMOTED",
+  HOLD = "HOLD",
+  CANCEL = "CANCEL",
+}
+
 export enum payslipValueType {
   PERCENTAGE = "PERCENTAGE",
   FIXED = "FIXED",
@@ -31,7 +37,7 @@ export enum employmentTypeType {
   CONSULTANT = "CONSULTANT",
 }
 
-export enum leaveEncashmentType {
+export enum leaveEncasementType {
   YEARLY = "YEARLY",
   FULL_FINAL = "FULL_FINAL",
 }
