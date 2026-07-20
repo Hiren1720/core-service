@@ -2,6 +2,7 @@ import { Router } from "express";
 import OnboardRoutes from "./onboard.routes";
 import EmployeeRoutes from "./employee.routes";
 import PromotionRoutes from "./promotion.routes";
+import TerminationRoutes from "./termination.routes";
 
 const router = Router();
 
@@ -18,6 +19,11 @@ router.use(
 router.use(
   "/promotion",
   PromotionRoutes
+);
+
+router.use(
+  "/termination",
+  TerminationRoutes
 );
 
 export default router;

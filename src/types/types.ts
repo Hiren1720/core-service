@@ -25,6 +25,12 @@ export enum promotionStatus {
   CANCEL = "CANCEL",
 }
 
+export enum terminationStatus {
+  TERMINATE = "TERMINATE",
+  HOLD = "HOLD",
+  CANCEL = "CANCEL",
+}
+
 export enum payslipValueType {
   PERCENTAGE = "PERCENTAGE",
   FIXED = "FIXED",

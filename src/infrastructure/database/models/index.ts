@@ -13,6 +13,7 @@ import { PolicyModel } from "./Policy.model.js";
 import { PromotionModel } from "./promotion.model.js";
 import { ReimbursementModel } from "./reimbursement.model.js";
 import { ShiftModel } from "./shift.model.js";
+import { TerminationModel } from "./termination.model.js";
 import { UserModel } from "./user.model.js";
 import { UserAssignmentModel } from "./userAssignment.model.js";
 import { UserDetailModel } from "./userDetail.model.js";
@@ -37,6 +38,7 @@ export {
   PromotionModel,
   ReimbursementModel,
   ShiftModel,
+  TerminationModel,
   UserAssignmentModel,
   UserModel,
   UserDetailModel,
