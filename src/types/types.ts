@@ -31,6 +31,12 @@ export enum terminationStatus {
   CANCEL = "CANCEL",
 }
 
+export enum resignationStatus {
+  PENDING = "PENDING",
+  ACCEPTED = "ACCEPTED",
+  REJECTED = "REJECTED",
+}
+
 export enum payslipValueType {
   PERCENTAGE = "PERCENTAGE",
   FIXED = "FIXED",
@@ -47,4 +53,3 @@ export enum leaveEncasementType {
   YEARLY = "YEARLY",
   FULL_FINAL = "FULL_FINAL",
 }
-
