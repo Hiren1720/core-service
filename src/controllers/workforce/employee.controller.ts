@@ -3,6 +3,8 @@ import {
   UserAssignmentModel,
   UserDetailModel,
   UserModel,
+  UserPayslipModel,
+  UserPolicyModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
@@ -253,6 +255,52 @@ export const getEmployeeCount = async (
           deleted,
         },
         "Employee counts fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmployeeById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId } = req.params;
+
+    const [user, assignments, policy, payslip] = await Promise.all([
+      UserModel.findById(userId),
+
+      UserAssignmentModel.findOne({ userId })
+        .sort({ createdAt: -1 })
+        .populate("assignments.branchId", "name")
+        .populate(
+          "assignments.shiftId",
+          "name startTime endTime breakStartTime breakEndTime",
+        )
+        .populate("assignments.designationId", "name")
+        .populate("assignments.departmentId", "name"),
+
+      UserPolicyModel.findOne({ userId }).sort({
+        createdAt: -1,
+      }),
+
+      UserPayslipModel.findOne({ userId }).sort({
+        createdAt: -1,
+      }),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          user,
+          assignments,
+          policy,
+          payslip,
+        },
+        "Employee fetched successfully",
       ),
     );
   } catch (error) {

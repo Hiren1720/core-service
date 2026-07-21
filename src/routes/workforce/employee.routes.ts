@@ -4,6 +4,7 @@ import { authenticateUser } from "../../middleware/user.middleware.js";
 import { upload } from "../../middleware/upload.middleware.js";
 import {
   editUserDetail,
+  getEmployeeById,
   getEmployeeCount,
   getEmployeeList,
   myManagedEmployeeList,
@@ -28,5 +29,7 @@ router.put(
 router.get("/", authenticateUser, getEmployeeList);
 
 router.get("/count", authenticateUser, getEmployeeCount);
+
+router.get("/:userId", authenticateUser, getEmployeeById)
 
 export default router;
