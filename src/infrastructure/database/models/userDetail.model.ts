@@ -39,6 +39,11 @@ const UserDetailSchema = new Schema(
     },
 
     bank: {
+      bankName: {
+        type: String,
+        trim: true,
+        default: "",
+      },
       accountNo: {
         type: Number,
         default: null,
@@ -47,6 +52,24 @@ const UserDetailSchema = new Schema(
         type: String,
         trim: true,
         default: "",
+      },
+      uanNo: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      esicNo: {
+        type: String,
+        trim: true,
+        default: "",
+      },
+      pfJoiningDate: {
+        type: Date,
+        default: null,
+      },
+      esicJoiningDate: {
+        type: Date,
+        default: null,
       },
     },
 

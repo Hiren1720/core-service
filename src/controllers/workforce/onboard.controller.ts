@@ -52,8 +52,13 @@ export const createEmployee = async (
       motherOccupation,
       motherPhone,
 
+      bankName,
       accountNo,
       ifscCode,
+      uanNo,
+      esicNo,
+      pfJoiningDate,
+      esicJoiningDate,
 
       educations,
       experiences,
@@ -137,8 +142,13 @@ export const createEmployee = async (
           },
 
           bank: {
+            bankName,
             accountNo,
             ifscCode,
+            uanNo,
+            esicNo,
+            pfJoiningDate,
+            esicJoiningDate,
           },
 
           educations: parsedEducations.map((item: any, index: number) => ({

@@ -46,8 +46,13 @@ export const editUserDetail = async (
       motherOccupation,
       motherPhone,
 
+      bankName,
       accountNo,
       ifscCode,
+      uanNo,
+      esicNo,
+      pfJoiningDate,
+      esicJoiningDate,
     } = req.body;
 
     // ===============================
@@ -136,6 +141,11 @@ export const editUserDetail = async (
     detail.bank = {
       accountNo: accountNo ?? detail.bank?.accountNo,
       ifscCode: ifscCode ?? detail.bank?.ifscCode,
+      bankName: bankName ?? detail.bank?.bankName,
+      uanNo: uanNo ?? detail.bank?.uanNo,
+      esicNo: esicNo ?? detail.bank?.esicNo,
+      pfJoiningDate: pfJoiningDate ?? detail.bank?.pfJoiningDate,
+      esicJoiningDate: esicJoiningDate ?? detail.bank?.esicJoiningDate,
     };
 
     await detail.save();
