@@ -89,7 +89,7 @@ export const editUserDetail = async (
       user.gender = gender;
     }
 
-    if (role !== user.role) {
+    if (role && role !== user.role) {
       user.role = role;
     }
 
