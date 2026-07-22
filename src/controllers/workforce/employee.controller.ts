@@ -283,9 +283,11 @@ export const getEmployeeById = async (
         .populate("assignments.designationId", "name")
         .populate("assignments.departmentId", "name"),
 
-      UserPolicyModel.findOne({ userId }).sort({
-        createdAt: -1,
-      }),
+      UserPolicyModel.findOne({ userId })
+        .sort({
+          createdAt: -1,
+        })
+        .populate("policyId", "name"),
 
       UserPayslipModel.findOne({ userId }).sort({
         createdAt: -1,
