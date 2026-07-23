@@ -1,8 +1,13 @@
 import { NextFunction, Request, Response } from "express";
-import { PromotionModel } from "../../infrastructure/database/models";
+import {
+  PromotionModel,
+  UserAssignmentModel,
+  UserModel,
+} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { promotionStatus } from "../../types/types";
+import el from "zod/v4/locales/el.js";
 
 export const createPromotion = async (
   req: Request,
@@ -207,6 +212,33 @@ export const updatePromotionStatus = async (
     }
 
     promotion.status = status;
+
+    if (status === promotionStatus.PROMOTED) {
+      // Update user's current designation
+      await UserModel.findByIdAndUpdate(promotion.userId, {
+        designationId: promotion.designationId,
+      });
+
+      // Get latest assignment
+      const existingAssignment = await UserAssignmentModel.findOne({
+        userId: promotion.userId,
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      if (existingAssignment) {
+        const { _id, createdAt, updatedAt, ...assignmentData } =
+          existingAssignment;
+
+        await UserAssignmentModel.create({
+          ...assignmentData,
+          assignments: assignmentData.assignments.map((assignment: any) => ({
+            ...assignment,
+            designationId: promotion.designationId,
+          })),
+        });
+      }
+    }
 
     await addUserHistory({
       userId: req.user!.id as string,
