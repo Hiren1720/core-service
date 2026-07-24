@@ -26,6 +26,14 @@ const ResignationSchema = new Schema(
       trim: true,
     },
 
+    mailSent: {
+      type: Boolean,
+      default: false,
+    },
+    mailSentAt: {
+      type: Date,
+      default: null,
+    },
     status: {
       type: String,
       enum: Object.values(resignationStatus),

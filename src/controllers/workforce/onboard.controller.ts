@@ -16,6 +16,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { status, userStatus } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { generateUserLeaveBalance } from "../../services/leave.service";
 
 export const createEmployee = async (
   req: Request,
@@ -455,6 +456,13 @@ export const assignRolesResponsibility = async (
           { session },
         ),
       );
+
+      // create user leave balance
+      await generateUserLeaveBalance({
+        userId: user._id.toString(),
+        policyId: policyId,
+        session,
+      });
     }
 
     // Payslip
@@ -469,8 +477,8 @@ export const assignRolesResponsibility = async (
           [
             {
               userId,
-              salary,
-              payslipId,
+              salary: salary ?? currentPayslip?.salary,
+              payslipId: payslipId ?? currentPayslip?.payslipId,
               remarks,
               assignedBy,
             },

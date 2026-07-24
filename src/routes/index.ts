@@ -9,6 +9,7 @@ import OrganizationRoutes from "./organization";
 import WorkforceRoutes from "./workforce";
 import ExpenseRoutes from "./expense";
 import PayslipRoutes from "./payslip";
+import PerformanceRoutes from "./performance";
 
 const router = Router();
 
@@ -29,5 +30,7 @@ router.use("/workforce", WorkforceRoutes);
 router.use("/expense", ExpenseRoutes);
 
 router.use("/payslip", PayslipRoutes);
+
+router.use("/performance", PerformanceRoutes);
 
 export default router;

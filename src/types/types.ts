@@ -53,3 +53,18 @@ export enum leaveEncasementType {
   YEARLY = "YEARLY",
   FULL_FINAL = "FULL_FINAL",
 }
+
+export enum leaveStatusType {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+}
+
+export enum attendanceType {
+  PRESENT = "PRESENT",
+  HALF_DAY = "HALF_DAY",
+  ABSENT = "ABSENT",
+  HOLIDAY = "HOLIDAY",
+  LEAVE = "LEAVE",
+  WEEK_OFF = "WEEK_OFF",
+}

@@ -1,8 +1,13 @@
 import { NextFunction, Request, Response } from "express";
-import { ResignationModel } from "../../infrastructure/database/models";
+import {
+  ResignationModel,
+  UserModel,
+} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { resignationStatus } from "../../types/types";
+import { sendMail } from "../../shared/services/mail.service";
+import { resignationAcceptedTemplate } from "../../shared/templates/resignationAccepted";
 
 export const createResignation = async (
   req: Request,
@@ -226,6 +231,74 @@ export const updateResignationStatus = async (
     return res
       .status(200)
       .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendResignationAcceptedMail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId, email } = req.body;
+    const { id: senderId } = req.user!;
+
+    const [user, sender, resignation] = await Promise.all([
+      UserModel.findById(userId).select("email firstName lastName"),
+      UserModel.findById(senderId).select("firstName lastName role"),
+      ResignationModel.findOne({ userId }).sort({ createdAt: -1 }),
+    ]);
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("Employee not found"));
+    }
+
+    if (!sender) {
+      return res.status(404).json(ApiResponse.error("Sender not found"));
+    }
+
+    if (!resignation) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Resignation record not found"));
+    }
+
+    const beneficiaryEmail = email || user.email;
+
+    const beneficiaryName = `${user.firstName} ${user.lastName}`.trim();
+    const senderName = `${sender.firstName} ${sender.lastName}`.trim();
+
+    const lastWorkingDay =
+      resignation.lastWorkingDate.toLocaleDateString("en-GB");
+
+    await sendMail({
+      to: beneficiaryEmail,
+      subject: "Resignation Accepted",
+      html: resignationAcceptedTemplate({
+        employeeName: beneficiaryName,
+        lastWorkingDay,
+        managerName: senderName,
+        managerDesignation: sender.role,
+      }),
+    });
+
+    resignation.mailSent = true;
+    resignation.mailSentAt = new Date();
+
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "resignationMail",
+      fieldValue: lastWorkingDay,
+      remarks: "",
+      assignedBy: senderId,
+    });
+    await resignation.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Resignation email sent successfully"));
   } catch (error) {
     next(error);
   }

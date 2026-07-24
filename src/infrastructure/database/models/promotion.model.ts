@@ -30,7 +30,14 @@ const PromotionSchema = new Schema(
       type: String,
       trim: true,
     },
-
+    mailSent: {
+      type: Boolean,
+      default: false,
+    },
+    mailSentAt: {
+      type: Date,
+      default: null,
+    },
     status: {
       type: String,
       enum: Object.values(promotionStatus),

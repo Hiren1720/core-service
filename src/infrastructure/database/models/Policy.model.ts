@@ -4,21 +4,6 @@ import { leaveEncasementType, status } from "../../../types/types";
 /* ---------------- Work Hours ---------------- */
 const WorkHourSchema = new Schema(
   {
-    workingHours: {
-      type: Number,
-      default: 8,
-    },
-
-    startTime: {
-      type: String,
-      required: true,
-    },
-
-    endTime: {
-      type: String,
-      required: true,
-    },
-
     weeklyOffs: [
       {
         type: String,

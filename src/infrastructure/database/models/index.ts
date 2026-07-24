@@ -1,4 +1,5 @@
 import { AdminModel } from "./admin.model.js";
+import { AttendanceModel } from "./attendance.model.js";
 import { BankAccountModel } from "./bankAccount.model.js";
 import { BranchModel } from "./branch.model.js";
 import { CompanyModel } from "./company.model.js";
@@ -7,6 +8,7 @@ import { DepartmentModel } from "./department.model.js";
 import { DesignationModel } from "./designation.model.js";
 import { HolidayModel } from "./holiday.model.js";
 import { LeaveModel } from "./leave.model.js";
+import { LeaveRequestModel } from "./leaveRequest.model.js";
 import { OfficeExpenseModel } from "./officeExpense.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
@@ -19,12 +21,14 @@ import { UserModel } from "./user.model.js";
 import { UserAssignmentModel } from "./userAssignment.model.js";
 import { UserDetailModel } from "./userDetail.model.js";
 import { UserHistoryModel } from "./userHistory.model.js";
+import { UserLeaveBalanceModel } from "./userLeaveBalance.model.js";
 import { UserPayslipModel } from "./userPayslip.model.js";
 import { UserPolicyModel } from "./userPolicy.model.js";
 import { UserSessionModel } from "./userSession.model.js";
 
 export {
   AdminModel,
+  AttendanceModel,
   BankAccountModel,
   BranchModel,
   CompanyModel,
@@ -33,6 +37,7 @@ export {
   DesignationModel,
   HolidayModel,
   LeaveModel,
+  LeaveRequestModel,
   OfficeExpenseModel,
   PayslipModel,
   PolicyModel,
@@ -45,6 +50,7 @@ export {
   UserModel,
   UserDetailModel,
   UserHistoryModel,
+  UserLeaveBalanceModel,
   UserPayslipModel,
   UserPolicyModel,
   UserSessionModel,

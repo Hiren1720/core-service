@@ -7,7 +7,8 @@ import {
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { promotionStatus } from "../../types/types";
-import el from "zod/v4/locales/el.js";
+import { sendMail } from "../../shared/services/mail.service";
+import { promotionTemplate } from "../../shared/templates/promotion";
 
 export const createPromotion = async (
   req: Request,
@@ -252,6 +253,76 @@ export const updatePromotionStatus = async (
     return res
       .status(200)
       .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendPromotionMail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId, email } = req.body;
+    const { id: senderId } = req.user!;
+
+    const [user, sender, promotion]: any[] = await Promise.all([
+      UserModel.findById(userId).select("email firstName lastName"),
+      UserModel.findById(senderId).select("firstName lastName role"),
+      PromotionModel.findOne({ userId })
+        .sort({ createdAt: -1 })
+        .populate("designationId", "name"),
+    ]);
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("Employee not found"));
+    }
+
+    if (!sender) {
+      return res.status(404).json(ApiResponse.error("Sender not found"));
+    }
+
+    if (!promotion) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Promotion record not found"));
+    }
+
+    const beneficiaryEmail = email || user.email;
+
+    const beneficiaryName = `${user.firstName} ${user.lastName}`.trim();
+    const senderName = `${sender.firstName} ${sender.lastName}`.trim();
+
+    const effectiveFrom = promotion.effectiveDate.toLocaleDateString("en-GB");
+
+    await sendMail({
+      to: beneficiaryEmail,
+      subject: "Promotion",
+      html: promotionTemplate({
+        employeeName: beneficiaryName,
+        newDesignation: promotion.designationId?.name,
+        effectiveFrom,
+        managerName: senderName,
+        managerDesignation: sender.role,
+      }),
+    });
+
+    promotion.mailSent = true;
+    promotion.mailSentAt = new Date();
+
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "promotionMail",
+      fieldValue: effectiveFrom,
+      remarks: "",
+      assignedBy: senderId,
+    });
+    await promotion.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Promotion email sent successfully"));
   } catch (error) {
     next(error);
   }

@@ -8,11 +8,12 @@ import {
   getResignationCount,
   updateResignation,
   updateResignationStatus,
+  sendResignationAcceptedMail,
 } from "../../controllers/workforce/resignation.controller.js";
 
 const router = Router();
 
-router.post("/", authenticateUser, authorize("OWNER"), createResignation);
+router.post("/", authenticateUser, createResignation);
 
 router.get("/", authenticateUser, getResignations);
 
@@ -23,15 +24,17 @@ router.get("/:resignationId", authenticateUser, getResignationById);
 router.put(
   "/:resignationId",
   authenticateUser,
-  authorize("OWNER"),
+  // authorize("OWNER"),
   updateResignation,
 );
 
 router.patch(
   "/status/:resignationId",
   authenticateUser,
-  authorize("OWNER"),
+  // authorize("OWNER"),
   updateResignationStatus,
 );
+
+router.post("/send-mail", authenticateUser, sendResignationAcceptedMail);
 
 export default router;

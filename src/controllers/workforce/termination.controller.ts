@@ -1,8 +1,13 @@
 import { NextFunction, Request, Response } from "express";
-import { TerminationModel } from "../../infrastructure/database/models";
+import {
+  TerminationModel,
+  UserModel,
+} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { terminationStatus } from "../../types/types";
+import { sendMail } from "../../shared/services/mail.service";
+import { terminationTemplate } from "../../shared/templates/termination";
 
 export const createTermination = async (
   req: Request,
@@ -230,6 +235,75 @@ export const updateTerminationStatus = async (
     return res
       .status(200)
       .json(ApiResponse.success(null, "Status updated successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendTerminationMail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId, email } = req.body;
+    const { id: senderId } = req.user!;
+
+    const [user, sender, termination] = await Promise.all([
+      UserModel.findById(userId).select("email firstName lastName"),
+      UserModel.findById(senderId).select("firstName lastName role"),
+      TerminationModel.findOne({ userId }).sort({ createdAt: -1 }),
+    ]);
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("Employee not found"));
+    }
+
+    if (!sender) {
+      return res.status(404).json(ApiResponse.error("Sender not found"));
+    }
+
+    if (!termination) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Termination record not found"));
+    }
+
+    const beneficiaryEmail = email || user.email;
+
+    const beneficiaryName = `${user.firstName} ${user.lastName}`.trim();
+    const senderName = `${sender.firstName} ${sender.lastName}`.trim();
+
+    const lastWorkingDay =
+      termination.lastWorkingDate.toLocaleDateString("en-GB");
+
+    await sendMail({
+      to: beneficiaryEmail,
+      subject: "Termination",
+      html: terminationTemplate({
+        employeeName: beneficiaryName,
+        terminationDate: lastWorkingDay,
+        reason: termination.reason || "",
+        managerName: senderName,
+        managerDesignation: sender.role,
+      }),
+    });
+
+    termination.mailSent = true;
+    termination.mailSentAt = new Date();
+
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "terminationMail",
+      fieldValue: lastWorkingDay,
+      remarks: "",
+      assignedBy: senderId,
+    });
+    await termination.save();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Termination email sent successfully"));
   } catch (error) {
     next(error);
   }

@@ -8,11 +8,12 @@ import {
   getPromotionCount,
   updatePromotion,
   updatePromotionStatus,
+  sendPromotionMail,
 } from "../../controllers/workforce/promotion.controller.js";
 
 const router = Router();
 
-router.post("/", authenticateUser, authorize("OWNER"), createPromotion);
+router.post("/", authenticateUser, createPromotion);
 
 router.get("/", authenticateUser, getPromotions);
 
@@ -23,15 +24,17 @@ router.get("/:promotionId", authenticateUser, getPromotionById);
 router.put(
   "/:promotionId",
   authenticateUser,
-  authorize("OWNER"),
+  // authorize("OWNER"),
   updatePromotion,
 );
 
 router.patch(
   "/status/:promotionId",
   authenticateUser,
-  authorize("OWNER"),
+  // authorize("OWNER"),
   updatePromotionStatus,
 );
+
+router.post("/send-mail", authenticateUser, sendPromotionMail);
 
 export default router;
