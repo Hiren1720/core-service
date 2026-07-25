@@ -579,7 +579,7 @@ export const assignRolesResponsibility = async (
         ),
       );
     }
-    if (user.role !== role) {
+    if (role && user.role !== role) {
       user.role = role;
       operations.push(
         addUserHistory(
