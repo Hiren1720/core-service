@@ -24,7 +24,33 @@ export const getOverallExpensesCount = async (
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
 
-    if (year && month) {
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+
+    if (startDate && endDate) {
+      const currentStart = new Date(startDate);
+      const currentEnd = new Date(endDate);
+
+      currentEnd.setHours(23, 59, 59, 999);
+
+      currentFilter.date = {
+        $gte: currentStart,
+        $lte: currentEnd,
+      };
+
+      const diff = currentEnd.getTime() - currentStart.getTime();
+
+      const pastEnd = new Date(currentStart);
+      pastEnd.setDate(pastEnd.getDate() - 1);
+      pastEnd.setHours(23, 59, 59, 999);
+
+      const pastStart = new Date(pastEnd.getTime() - diff);
+
+      pastFilter.date = {
+        $gte: pastStart,
+        $lte: pastEnd,
+      };
+    } else if (year && month) {
       // Current Month
       currentFilter.date = {
         $gte: new Date(year, month - 1, 1),
@@ -45,8 +71,6 @@ export const getOverallExpensesCount = async (
         $lt: new Date(previousYear, previousMonth, 1),
       };
     }
-
-    console.log(currentFilter, pastFilter);
 
     const [reimbursement, officeExpense, pastReimbursement, pastOfficeExpense] =
       await Promise.all([

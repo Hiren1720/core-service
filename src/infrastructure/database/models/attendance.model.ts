@@ -18,7 +18,7 @@ const AttendanceSchema = new Schema(
 
     inTime: {
       type: Date,
-      required: true,
+      default: null,
     },
 
     outTime: {

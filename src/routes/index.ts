@@ -11,6 +11,8 @@ import ExpenseRoutes from "./expense";
 import PayslipRoutes from "./payslip";
 import PerformanceRoutes from "./performance";
 
+import DashboardRoutes from "./dashboard/dashboard.routes.js";
+
 const router = Router();
 
 router.use("/admin/auth", AdminAuthRoutes);
@@ -20,6 +22,8 @@ router.use("/admin/profile", AdminProfileRoutes);
 router.use("/admin/companies", AdminCompanyRoutes);
 
 router.use("/admin/bank-accounts", AdminBankAccountRoutes);
+
+router.use("/dashboard", DashboardRoutes);
 
 router.use("/auth", AuthRoutes);
 
