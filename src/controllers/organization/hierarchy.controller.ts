@@ -14,12 +14,34 @@ export const getDepartmentEmployeeList = async (
 ) => {
   try {
     const companyId = req.user!.companyId;
+    const { branchId, shiftId } = req.query;
+
+    const assignmentMatch: any = {};
+    const departmentFilter: any = {
+      companyId,
+      status: status.ACTIVE,
+    };
+
+    if (branchId) {
+      departmentFilter["assignments.branchId"] = new mongoose.Types.ObjectId(
+        branchId as string,
+      );
+      assignmentMatch["assignments.branchId"] = new mongoose.Types.ObjectId(
+        branchId as string,
+      );
+    }
+
+    if (shiftId) {
+      departmentFilter["assignments.shiftIds"] = new mongoose.Types.ObjectId(
+        shiftId as string,
+      );
+      assignmentMatch["assignments.shiftId"] = new mongoose.Types.ObjectId(
+        shiftId as string,
+      );
+    }
 
     const [departments, userAssignments] = await Promise.all([
-      DepartmentModel.find({
-        companyId,
-        status: status.ACTIVE,
-      })
+      DepartmentModel.find(departmentFilter)
         .select("_id name assignments")
         .lean(),
 
@@ -47,6 +69,13 @@ export const getDepartmentEmployeeList = async (
             newRoot: "$assignment",
           },
         },
+        ...(Object.keys(assignmentMatch).length
+          ? [
+              {
+                $match: assignmentMatch,
+              },
+            ]
+          : []),
         {
           $lookup: {
             from: "users", // User collection name
