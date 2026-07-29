@@ -138,6 +138,14 @@ export const punchInOut = async (
       address,
     };
     attendance.outMethod = method;
+
+    if (!attendance.inTime) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json(ApiResponse.error("Punch-in time is missing for this attendance"));
+    }
+
     attendance.totalWorkedMinutes = Math.max(
       0,
       Math.floor(
