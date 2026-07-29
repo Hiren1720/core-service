@@ -546,7 +546,7 @@ export const assignRolesResponsibility = async (
       }
     }
     //other fields
-    if (!user.employmentType || user.employmentType !== employmentType) {
+    if (employmentType && user.employmentType !== employmentType) {
       user.employmentType = employmentType;
       operations.push(
         addUserHistory(
@@ -562,7 +562,7 @@ export const assignRolesResponsibility = async (
       );
     }
     if (
-      typeof user.probationPeriod !== "number" ||
+      typeof probationPeriod === "number" &&
       user.probationPeriod !== probationPeriod
     ) {
       user.probationPeriod = probationPeriod;
@@ -715,25 +715,37 @@ export const getBranchShiftDepartmentList = async (
     const shiftCountMap = new Map<string, number>();
     const departmentCountMap = new Map<string, number>();
     const departmentManagerMap = new Map<string, number>();
+    const departmentEmployeeMap = new Map<string, any[]>();
 
     for (const user of userAssignments) {
       for (const assignment of user.assignments) {
-        const manager = user.user.role === "MANAGER" ? user.user : undefined;
-
+        const manager = user.user.role === "MANAGER";
         const branchKey = assignment.branchId.toString();
         const shiftKey = `${assignment.branchId}_${assignment.shiftId}`;
         const departmentKey = `${assignment.branchId}_${assignment.shiftId}_${assignment.departmentId}`;
 
-        branchCountMap.set(branchKey, (branchCountMap.get(branchKey) || 0) + 1);
-        shiftCountMap.set(shiftKey, (shiftCountMap.get(shiftKey) || 0) + 1);
-        departmentCountMap.set(
-          departmentKey,
-          (departmentCountMap.get(departmentKey) || 0) + 1,
-        );
+        if (manager) {
+          //avoid count because only employee count returning
+          if (!assignment.isReporting) {
+            //For manager exclude reporting data only manged fields for manager data
+            departmentManagerMap.set(departmentKey, user.user);
+          }
+          continue;
+        } else {
+          if (!departmentEmployeeMap.has(departmentKey)) {
+            departmentEmployeeMap.set(departmentKey, []);
+          }
 
-        //For manager exclude reporting data only manged fields
-        if (!assignment.isReporting) {
-          departmentManagerMap.set(departmentKey, manager);
+          departmentEmployeeMap.get(departmentKey)!.push(user.user);
+          branchCountMap.set(
+            branchKey,
+            (branchCountMap.get(branchKey) || 0) + 1,
+          );
+          shiftCountMap.set(shiftKey, (shiftCountMap.get(shiftKey) || 0) + 1);
+          departmentCountMap.set(
+            departmentKey,
+            (departmentCountMap.get(departmentKey) || 0) + 1,
+          );
         }
       }
     }
@@ -767,6 +779,10 @@ export const getBranchShiftDepartmentList = async (
                 manager: departmentManagerMap.get(
                   `${branch._id}_${shift._id}_${department._id}`,
                 ),
+                employee:
+                  departmentEmployeeMap.get(
+                    `${branch._id}_${shift._id}_${department._id}`,
+                  ) || [],
               }));
 
             return {

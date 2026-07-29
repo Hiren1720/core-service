@@ -5,6 +5,7 @@ import DepartmentRoutes from "./department.routes";
 import DesignationRoutes from "./designation.routes";
 import LeaveRoutes from "./leave.routes";
 import HolidayRoutes from "./holiday.routes";
+import HierarchyRoutes from "./hierarchy.routes";
 import PolicyRoutes from "./policy.routes";
 
 const router = Router();
@@ -28,6 +29,11 @@ router.use(
   "/designations",
   DesignationRoutes
 );
+
+router.use(
+  "/hierarchy",
+  HierarchyRoutes
+)
 
 router.use(
   "/leaves",
