@@ -509,21 +509,25 @@ export const assignRolesResponsibility = async (
         );
       } else {
         // Compare only required fields
-        const isSame = existingAssignment.assignments.every(
-          (oldAssignment: any) =>
-            assignments.some(
-              (newAssignment: any) =>
-                oldAssignment.branchId.toString() === newAssignment.branchId &&
-                oldAssignment.shiftId.toString() === newAssignment.shiftId &&
-                oldAssignment.departmentId.toString() ===
-                  newAssignment.departmentId &&
-                oldAssignment.designationId.toString() ===
-                  newAssignment.designationId &&
-                (oldAssignment.reportingManagerId?.toString() || "") ===
-                  (newAssignment.reportingManagerId || "") &&
-                oldAssignment.isReporting === newAssignment.isReporting,
-            ),
-        );
+        const normalize = (list: any[]) =>
+          list
+            .map((a) => ({
+              branchId: a.branchId.toString(),
+              shiftId: a.shiftId.toString(),
+              departmentId: a.departmentId.toString(),
+              designationId: a.designationId.toString(),
+              reportingManagerId: a.reportingManagerId?.toString() ?? "",
+              isReporting: a.isReporting,
+            }))
+            .sort((a, b) =>
+              `${a.branchId}${a.shiftId}${a.departmentId}${a.designationId}`.localeCompare(
+                `${b.branchId}${b.shiftId}${b.departmentId}${b.designationId}`,
+              ),
+            );
+
+        const isSame =
+          JSON.stringify(normalize(existingAssignment.assignments)) ===
+          JSON.stringify(normalize(assignments));
 
         if (!isSame) {
           operations.push(
