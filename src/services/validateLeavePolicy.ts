@@ -58,11 +58,12 @@ export const validateLeaveOverlap = async (
   userId: string,
   startDate: Date,
   endDate: Date,
+  excludeLeaveRequestId?: string,
 ) => {
-  const existingLeave = await LeaveRequestModel.findOne({
+  const filter: any = {
     userId,
     status: {
-      $nin: [leaveStatusType.REJECTED],
+      $ne: leaveStatusType.REJECTED,
     },
     startDate: {
       $lte: endDate,
@@ -70,8 +71,15 @@ export const validateLeaveOverlap = async (
     endDate: {
       $gte: startDate,
     },
-  });
+  };
 
+  if (excludeLeaveRequestId) {
+    filter._id = {
+      $ne: excludeLeaveRequestId,
+    };
+  }
+
+  const existingLeave = await LeaveRequestModel.findOne(filter);
   if (existingLeave) {
     throw new Error("Leave already exists for selected dates");
   }
@@ -97,6 +105,14 @@ export const validateContinuousLeave = async ({
   const previousLeaves = await LeaveRequestModel.find({
     userId,
     status: leaveStatusType.APPROVED,
+
+    endDate: {
+      $gte: new Date(startDate.getTime() - maxLeaves * 86400000),
+    },
+
+    startDate: {
+      $lte: new Date(endDate.getTime() + maxLeaves * 86400000),
+    },
   }).select("startDate endDate");
 
   const leaveDates = new Set<string>();

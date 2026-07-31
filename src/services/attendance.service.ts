@@ -1,15 +1,33 @@
-// attendance.service.ts
-
 import mongoose from "mongoose";
 
 import {
-  UserModel,
   AttendanceModel,
-  LeaveRequestModel,
   HolidayModel,
+  LeaveRequestModel,
+  PolicyModel,
+  UserModel,
   UserPolicyModel,
 } from "../infrastructure/database/models";
-import { leaveStatusType, userStatus } from "../types/types";
+
+import { attendanceType, leaveStatusType, userStatus } from "../types/types";
+
+const weekDays = [
+  "SUNDAY",
+  "MONDAY",
+  "TUESDAY",
+  "WEDNESDAY",
+  "THURSDAY",
+  "FRIDAY",
+  "SATURDAY",
+];
+
+const getSaturdayRule = (date: Date) => {
+  if (date.getDay() !== 6) return null;
+
+  const occurrence = Math.ceil(date.getDate() / 7);
+
+  return `${occurrence}SATURDAY`;
+};
 
 export const createDailyAttendance = async () => {
   const session = await mongoose.startSession();
@@ -41,34 +59,44 @@ export const createDailyAttendance = async () => {
 
       if (exists) continue;
 
-      let attendanceStatus = "ABSENT";
+      let attendanceStatus = attendanceType.ABSENT;
 
       //---------------------------------------
       // Leave
       //---------------------------------------
+
       const leave = await LeaveRequestModel.exists({
         userId: user._id,
         status: leaveStatusType.APPROVED,
-        fromDate: { $lte: attendanceDate },
-        toDate: { $gte: attendanceDate },
+        startDate: {
+          $lte: attendanceDate,
+        },
+        endDate: {
+          $gte: attendanceDate,
+        },
       });
 
       if (leave) {
-        attendanceStatus = "LEAVE";
+        attendanceStatus = attendanceType.LEAVE;
       }
 
       //---------------------------------------
       // Holiday
       //---------------------------------------
 
-      if (attendanceStatus === "ABSENT") {
+      if (attendanceStatus === attendanceType.ABSENT) {
         const holiday = await HolidayModel.exists({
           companyId: user.companyId,
-          date: attendanceDate,
+          startDate: {
+            $lte: attendanceDate,
+          },
+          endDate: {
+            $gte: attendanceDate,
+          },
         });
 
         if (holiday) {
-          attendanceStatus = "HOLIDAY";
+          attendanceStatus = attendanceType.HOLIDAY;
         }
       }
 
@@ -76,22 +104,28 @@ export const createDailyAttendance = async () => {
       // Weekly Off
       //---------------------------------------
 
-      if (attendanceStatus === "ABSENT") {
-        const userPolicy = await UserPolicyModel.findOne({ userId: user._id })
-          .sort({ createdAt: -1 })
+      if (attendanceStatus === attendanceType.ABSENT) {
+        const userPolicy = await UserPolicyModel.findOne({
+          userId: user._id,
+        })
+          .sort({
+            createdAt: -1,
+          })
           .populate("policyId");
 
         const policy: any = userPolicy?.policyId;
 
         if (policy) {
-          const weekday = today
-            .toLocaleDateString("en-US", {
-              weekday: "long",
-            })
-            .toUpperCase();
+          const weekday = weekDays[today.getDay()];
+          const saturdayRule = getSaturdayRule(today);
 
-          if (policy.workHours.weeklyOffs.includes(weekday)) {
-            attendanceStatus = "WEEK_OFF";
+          const weeklyOffs = policy.workHours?.weeklyOffs || [];
+
+          if (
+            weeklyOffs.includes(weekday) ||
+            (saturdayRule && weeklyOffs.includes(saturdayRule))
+          ) {
+            attendanceStatus = attendanceType.WEEK_OFF;
           }
         }
       }
@@ -100,9 +134,7 @@ export const createDailyAttendance = async () => {
         insertOne: {
           document: {
             userId: user._id,
-
             attendanceDate,
-
             attendanceStatus,
           },
         },
@@ -116,10 +148,9 @@ export const createDailyAttendance = async () => {
     }
 
     await session.commitTransaction();
-  } catch (e) {
+  } catch (error) {
     await session.abortTransaction();
-
-    throw e;
+    throw error;
   } finally {
     session.endSession();
   }

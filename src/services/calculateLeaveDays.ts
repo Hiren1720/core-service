@@ -18,6 +18,12 @@ const weekDays = [
   "SATURDAY",
 ];
 
+const getSaturdayRule = (date: Date) => {
+  if (date.getDay() !== 6) return null;
+
+  return `${Math.ceil(date.getDate() / 7)}SATURDAY`;
+};
+
 export const calculateLeaveDays = async ({
   companyId,
   startDate,
@@ -51,10 +57,15 @@ export const calculateLeaveDays = async ({
   const current = new Date(startDate);
 
   while (current <= endDate) {
-    const dayName = weekDays[current.getDay()];
+    const weekday = weekDays[current.getDay()];
+    const saturdayRule = getSaturdayRule(current);
     const dateKey = current.toISOString().slice(0, 10);
 
-    if (!weeklyOffs.includes(dayName) && !holidaySet.has(dateKey)) {
+    const isWeeklyOff =
+      weeklyOffs.includes(weekday) ||
+      (saturdayRule && weeklyOffs.includes(saturdayRule));
+
+    if (!isWeeklyOff && !holidaySet.has(dateKey)) {
       totalDays++;
     }
 
