@@ -28,7 +28,7 @@ export const workforceOverview = async (
     const [
       activeEmployee,
       inactiveEmployee,
-      deletedEmployee,
+      // deletedEmployee,
       pendingOnboardingCount,
       pendingOnboardingList,
       pendingResignationCount,
@@ -44,7 +44,7 @@ export const workforceOverview = async (
         role: { $ne: "OWNER" },
       }),
       UserModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
-      UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
+      // UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
       UserModel.countDocuments({ ...filter, status: "PENDING" as userStatus }),
       UserModel.find({ ...filter, status: "PENDING" as userStatus })
         .select("profileImage firstName lastName")
@@ -107,10 +107,10 @@ export const workforceOverview = async (
       ApiResponse.success(
         {
           employee: {
-            total: activeEmployee + inactiveEmployee + deletedEmployee,
+            total: activeEmployee + inactiveEmployee,
             active: activeEmployee,
             inactive: inactiveEmployee,
-            deleted: deletedEmployee,
+            // deleted: deletedEmployee,
           },
           onboarding: {
             count: pendingOnboardingCount,

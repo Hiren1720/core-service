@@ -65,6 +65,8 @@ export const getHolidays = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [holidays, total] = await Promise.all([
@@ -110,7 +112,7 @@ export const getHolidaysCount = async (
       filter.effectiveYear = effectiveYear;
     }
 
-    const [active, inactive, deleted] = await Promise.all([
+    const [active, inactive] = await Promise.all([
       HolidayModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
       HolidayModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
       HolidayModel.countDocuments({ ...filter, status: "DELETED" as status }),
@@ -119,10 +121,9 @@ export const getHolidaysCount = async (
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: active + inactive + deleted,
+          total: active + inactive,
           active,
           inactive,
-          deleted,
         },
         "Holiday counts fetched successfully",
       ),

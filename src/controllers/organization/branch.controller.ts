@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   BranchModel,
   UserAssignmentModel,
+  UserModel,
 } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
@@ -78,6 +79,8 @@ export const getBranches = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [branches, total] = await Promise.all([
@@ -196,6 +199,22 @@ export const updateBranchStatus = async (
 
     if (!branch) {
       return res.status(404).json(ApiResponse.error("Branch not found"));
+    }
+
+    if (status !== "ACTIVE") {
+      const userCount = await UserModel.countDocuments({
+        branchId: branch._id,
+        companyId: req.user!.companyId,
+      });
+      if (userCount > 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              `Cannot update status. Users(${userCount}) are assigned to this branch.`,
+            ),
+          );
+      }
     }
 
     branch.status = status;

@@ -270,7 +270,7 @@ export const getEmployeeList = async (
     const filter: any = {
       companyId: req.user!.companyId,
       status: {
-        $in: [userStatus.PENDING, userStatus.ACCEPTED, userStatus.REJECTED],
+        $in: [userStatus.PENDING, userStatus.REJECTED],
       },
     };
 
@@ -282,13 +282,13 @@ export const getEmployeeList = async (
     }
 
     if (status) {
-      if (status === "ACCEPTED") {
-        filter.status = {
-          $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
-        };
-      } else {
-        filter.status = status;
-      }
+      // if (status === "ACCEPTED") {
+      //   filter.status = {
+      //     $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+      //   };
+      // } else {
+      filter.status = status;
+      // }
     }
 
     const [employees, total] = await Promise.all([
@@ -330,23 +330,23 @@ export const getEmployeeCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [pending, accepted, rejected] = await Promise.all([
+    const [pending, rejected] = await Promise.all([
       UserModel.countDocuments({ ...filter, status: "PENDING" as userStatus }),
-      UserModel.countDocuments({
-        ...filter,
-        status: {
-          $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
-        },
-      }),
+      // UserModel.countDocuments({
+      //   ...filter,
+      //   status: {
+      //     $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+      //   },
+      // }),
       UserModel.countDocuments({ ...filter, status: "REJECTED" as userStatus }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: pending + accepted + rejected,
+          total: pending + rejected,
           pending,
-          accepted,
+          // accepted,
           rejected,
         },
         "Employee counts fetched successfully",

@@ -3,6 +3,7 @@ import {
   BranchModel,
   DepartmentModel,
   ShiftModel,
+  UserModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
@@ -70,6 +71,8 @@ export const getDepartments = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [departments, total] = await Promise.all([
@@ -170,6 +173,22 @@ export const updateDepartmentStatus = async (
 
     if (!department) {
       return res.status(404).json(ApiResponse.error("Department not found"));
+    }
+
+    if (status !== "ACTIVE") {
+      const userCount = await UserModel.countDocuments({
+        departmentId: department._id,
+        companyId: req.user!.companyId,
+      });
+      if (userCount > 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              `Cannot update status. Users(${userCount}) are assigned to this department.`,
+            ),
+          );
+      }
     }
 
     department.status = status;

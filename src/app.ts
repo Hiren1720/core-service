@@ -7,6 +7,7 @@ import { errorMiddleware } from "./middleware/error.middleware";
 import { requestLogger } from "./middleware/request.middleware";
 import routes from "./routes/index.js";
 import path from "path";
+import { createDailyAttendance } from "./services/attendance.service";
 
 const app = express();
 
@@ -42,4 +43,5 @@ app.get("/", (_req, res) => {
 
 app.use(errorMiddleware);
 
+// createDailyAttendance();
 export default app;

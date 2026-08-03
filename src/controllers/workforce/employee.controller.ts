@@ -180,7 +180,7 @@ export const getEmployeeList = async (
       companyId: req.user!.companyId,
       role: { $ne: "OWNER" },
       status: {
-        $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+        $in: [userStatus.ACTIVE, userStatus.INACTIVE],
       },
     };
 
@@ -236,23 +236,23 @@ export const getEmployeeCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [active, inactive, deleted] = await Promise.all([
+    const [active, inactive] = await Promise.all([
       UserModel.countDocuments({
         ...filter,
         status: "ACTIVE" as status,
         role: { $ne: "OWNER" },
       }),
       UserModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
-      UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
+      // UserModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: active + inactive + deleted,
+          total: active + inactive,
           active,
           inactive,
-          deleted,
+          // deleted,
         },
         "Employee counts fetched successfully",
       ),

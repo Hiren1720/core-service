@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { ShiftModel } from "../../infrastructure/database/models";
+import { ShiftModel, UserModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { status } from "../../types/types";
 
 export const createShift = async (
   req: Request,
@@ -66,6 +67,8 @@ export const getShifts = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [shifts, total] = await Promise.all([
@@ -180,6 +183,22 @@ export const updateShiftStatus = async (
 
     if (!shift) {
       return res.status(404).json(ApiResponse.error("Shift not found"));
+    }
+
+    if (shift.status !== "ACTIVE") {
+      const userCount = await UserModel.countDocuments({
+        shiftId: shift._id,
+        companyId: req.user!.companyId,
+      });
+      if (userCount > 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              `Cannot update status. Users(${userCount}) are assigned to this shift.`,
+            ),
+          );
+      }
     }
 
     shift.status = status;

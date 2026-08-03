@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
-import { DesignationModel } from "../../infrastructure/database/models";
+import {
+  DesignationModel,
+  UserModel,
+} from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { status } from "../../types/types";
 
 export const createDesignation = async (
   req: Request,
@@ -56,6 +60,8 @@ export const getDesignations = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [designations, total] = await Promise.all([
@@ -156,6 +162,22 @@ export const updateDesignationStatus = async (
 
     if (!designation) {
       return res.status(404).json(ApiResponse.error("Designation not found"));
+    }
+
+    if (status !== "ACTIVE") {
+      const userCount = await UserModel.countDocuments({
+        designationId: designation._id,
+        companyId: req.user!.companyId,
+      });
+      if (userCount > 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              `Cannot update status. Users(${userCount}) are assigned to this designation.`,
+            ),
+          );
+      }
     }
 
     designation.status = status;

@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import { ApiResponse } from "../../shared/response/api-response";
-import { LeaveModel, PolicyModel } from "../../infrastructure/database/models";
+import {
+  LeaveModel,
+  PolicyModel,
+  UserPolicyModel,
+} from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { status } from "../../types/types";
 
@@ -175,6 +179,8 @@ export const getPolicies = async (
 
     if (status) {
       filter.status = status;
+    } else {
+      filter.status = { $ne: "DELETED" as status };
     }
 
     const [policies, total] = await Promise.all([
@@ -213,19 +219,18 @@ export const getPolicyCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [active, inactive, deleted] = await Promise.all([
+    const [active, inactive] = await Promise.all([
       PolicyModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
       PolicyModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
-      PolicyModel.countDocuments({ ...filter, status: "DELETED" as status }),
+      // PolicyModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: active + inactive + deleted,
+          total: active + inactive,
           active,
           inactive,
-          deleted,
         },
         "Policy counts fetched successfully",
       ),
@@ -274,6 +279,41 @@ export const updatePolicyStatus = async (
 
     if (!policy) {
       return res.status(404).json(ApiResponse.error("Policy not found"));
+    }
+
+    if (status !== "ACTIVE") {
+      const assignedUsers = await UserPolicyModel.aggregate([
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+        {
+          $group: {
+            _id: "$userId",
+            latestPolicy: {
+              $first: "$policyId",
+            },
+          },
+        },
+        {
+          $match: {
+            latestPolicy: new mongoose.Types.ObjectId(policy._id),
+          },
+        },
+        {
+          $limit: 1,
+        },
+      ]);
+      if (assignedUsers.length > 0) {
+        return res
+          .status(400)
+          .json(
+            ApiResponse.error(
+              "This policy is currently assigned to one or more employees.",
+            ),
+          );
+      }
     }
 
     policy.status = status;
