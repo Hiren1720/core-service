@@ -594,7 +594,7 @@ export const assignRolesResponsibility = async (
     }
 
     // user status
-    if (user.status === "PENDING") {
+    if (user.status === "PENDING" || user.status === "REJECTED") {
       user.status = "ACTIVE" as userStatus;
     }
     //reporting assignments
