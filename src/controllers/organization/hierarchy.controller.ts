@@ -19,7 +19,7 @@ export const getDepartmentEmployeeList = async (
     const assignmentMatch: any = {};
     const departmentFilter: any = {
       companyId,
-      status: status.ACTIVE,
+      status: { $ne: status.DELETED },
     };
 
     if (branchId) {
@@ -42,7 +42,7 @@ export const getDepartmentEmployeeList = async (
 
     const [departments, userAssignments] = await Promise.all([
       DepartmentModel.find(departmentFilter)
-        .select("_id name assignments")
+        .select("_id name assignments status")
         .lean(),
 
       UserAssignmentModel.aggregate([
@@ -91,6 +91,13 @@ export const getDepartmentEmployeeList = async (
           },
         },
         {
+          $match: {
+            "user.status": {
+              $in: [status.ACTIVE, status.INACTIVE],
+            },
+          },
+        },
+        {
           $project: {
             userId: 1,
             companyId: 1,
@@ -102,6 +109,7 @@ export const getDepartmentEmployeeList = async (
             "user.firstName": 1,
             "user.lastName": 1,
             "user.profileImage": 1,
+            "user.status": 1,
           },
         },
       ]),
@@ -141,6 +149,7 @@ export const getDepartmentEmployeeList = async (
       return {
         _id: department._id,
         name: department.name,
+        status: department.status,
         count: departmentCountMap.get(departmentId) || 0,
         manager: departmentManagerMap.get(departmentId),
         employee: departmentEmployeeMap.get(departmentId) || [],
