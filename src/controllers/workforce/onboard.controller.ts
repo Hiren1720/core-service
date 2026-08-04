@@ -641,7 +641,7 @@ export const getBranchShiftDepartmentList = async (
         companyId,
         status: status.ACTIVE,
       })
-        .select("_id name address")
+        .select("_id name address branchType")
         .lean(),
 
       ShiftModel.find({
@@ -814,6 +814,7 @@ export const getBranchShiftDepartmentList = async (
           name: branch.name,
           shifts: branchShifts,
           address: branch.address,
+          branchType: branch.branchType,
           count: branchCountMap.get(branch._id.toString()) || 0,
         };
       })
