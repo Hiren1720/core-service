@@ -353,7 +353,6 @@ export const getBranchShiftDepartmentList = async (
               count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
             };
           })
-          .filter((shift: any) => shift.departments.length > 0);
 
         return {
           _id: branch._id,
@@ -365,7 +364,6 @@ export const getBranchShiftDepartmentList = async (
           count: branchCountMap.get(branch._id.toString()) || 0,
         };
       })
-      .filter((branch: any) => branch.shifts.length > 0);
 
     return res
       .status(200)
