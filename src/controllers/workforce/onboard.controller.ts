@@ -699,6 +699,13 @@ export const getBranchShiftDepartmentList = async (
           },
         },
         {
+          $match: {
+            "user.status": {
+              $in: [status.ACTIVE],
+            },
+          },
+        },
+        {
           $project: {
             userId: 1,
             companyId: 1,
