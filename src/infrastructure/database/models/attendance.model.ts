@@ -64,6 +64,15 @@ const AttendanceSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+    
+    isHalfDay: {
+      type: Boolean,
+      default: false,
+    },
 
     earlyExitMinutes: {
       type: Number,

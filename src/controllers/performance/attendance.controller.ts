@@ -53,52 +53,79 @@ export const punchInOut = async (
     const shift: any = userShift?.shiftId;
     const policy: any = userPolicy?.policyId;
 
-    // ============================
-    // Punch In
-    // ============================
     if (!attendance) {
+      await session.abortTransaction();
+      return res
+        .status(404)
+        .json(ApiResponse.error("Attendance not generated for today"));
+    }
+
+    if (!shift) {
+      await session.abortTransaction();
+      return res.status(404).json(ApiResponse.error("Shift not assigned"));
+    }
+
+    if (!policy) {
+      await session.abortTransaction();
+      return res.status(404).json(ApiResponse.error("Policy not assigned"));
+    }
+
+    const restrictedStatus = [
+      attendanceType.HOLIDAY,
+      attendanceType.WEEK_OFF,
+      attendanceType.LEAVE,
+    ];
+
+    if (
+      !attendance.inTime &&
+      restrictedStatus.includes(attendance.attendanceStatus)
+    ) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            `Punch not allowed. Today is ${attendance.attendanceStatus
+              .replace("_", " ")
+              .toLowerCase()}.`,
+          ),
+        );
+    }
+
+    // ===========================================
+    // Punch In
+    // ===========================================
+    if (!attendance.inTime) {
       const shiftStart = new Date(attendanceDate);
       const [startHour, startMinute] = shift.startTime.split(":").map(Number);
-
       shiftStart.setHours(startHour, startMinute, 0, 0);
 
-      const diffMinutes = Math.max(
+      // Late Minutes
+      const lateMinutes = Math.max(
         0,
         Math.floor((now.getTime() - shiftStart.getTime()) / 60000),
       );
 
-      let attendanceStatus: attendanceType = attendanceType.PRESENT;
-      switch (true) {
-        case diffMinutes >= policy.lateRule.absentAfterMinutes:
-          attendanceStatus = attendanceType.ABSENT;
-          break;
+      attendance.inTime = now;
+      attendance.inLocation = {
+        latitude,
+        longitude,
+        address,
+      };
+      attendance.inMethod = method;
+      attendance.lateMinutes = lateMinutes;
 
-        case diffMinutes >= policy.lateRule.halfDayAfterMinutes:
-          attendanceStatus = attendanceType.HALF_DAY;
-          break;
+      // Late Mark
+      attendance.isLate = lateMinutes > policy.lateRule.allowedLateMinutes;
 
-        default:
-          attendanceStatus = attendanceType.PRESENT;
-      }
-      await AttendanceModel.create(
-        [
-          {
-            userId,
-            attendanceDate,
-            lateMinutes: diffMinutes,
-            inTime: now,
-            attendanceStatus,
-            inLocation: {
-              latitude,
-              longitude,
-              address,
-            },
+      // Half Day Candidate
+      // Employee came very late.
+      // Working hours will be verified during punch out.
+      attendance.isHalfDay =
+        lateMinutes >= policy.lateRule.halfDayWorkMaxHours * 60;
+      attendance.attendanceStatus = attendanceType.PRESENT;
 
-            inMethod: method,
-          },
-        ],
-        { session },
-      );
+      await attendance.save({ session });
 
       await session.commitTransaction();
       return res
@@ -107,76 +134,70 @@ export const punchInOut = async (
     }
 
     // ============================
-    // Already Punched Out
+    // Punch Out
     // ============================
     if (attendance.outTime) {
       await session.abortTransaction();
-      return res
-        .status(400)
-        .json(ApiResponse.error("Already punched out today"));
+      return res.status(400).json(ApiResponse.error("Already punched out"));
     }
 
-    // ============================
-    // Punch Out
-    // ============================
     const shiftEnd = new Date(attendanceDate);
-    const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-    shiftEnd.setHours(endHour, endMinute, 0, 0);
+    const [hour, minute] = shift.endTime.split(":").map(Number);
+    shiftEnd.setHours(hour, minute, 0, 0);
 
-    attendance.earlyExitMinutes = Math.max(
-      0,
-      Math.floor((shiftEnd.getTime() - now.getTime()) / 60000),
-    );
-    attendance.overtimeMinutes = Math.max(
-      0,
-      Math.floor((now.getTime() - shiftEnd.getTime()) / 60000),
-    );
     attendance.outTime = now;
+    attendance.outMethod = method;
     attendance.outLocation = {
       latitude,
       longitude,
       address,
     };
-    attendance.outMethod = method;
 
-    if (!attendance.inTime) {
-      await session.abortTransaction();
-      return res
-        .status(400)
-        .json(
-          ApiResponse.error("Punch-in time is missing for this attendance"),
-        );
-    }
-
-    attendance.totalWorkedMinutes = Math.max(
+    // Working Minutes
+    const workedMinutes = Math.max(
       0,
       Math.floor(
-        (attendance.outTime.getTime() - attendance.inTime.getTime()) /
-          (1000 * 60),
+        (attendance.outTime.getTime() - attendance.inTime.getTime()) / 60000,
       ),
     );
 
-    let attendanceStatus = attendance.attendanceStatus;
+    attendance.totalWorkedMinutes = workedMinutes;
 
-    /* Why compare priorities?
-    Example:
-        Employee logs in 2.5 hours late → HALF_DAY
-        Then works until midnight
+    // Early Exit
+    attendance.earlyExitMinutes = Math.max(
+      0,
+      Math.floor((shiftEnd.getTime() - attendance.outTime.getTime()) / 60000),
+    );
 
-        They should remain HALF_DAY, not become PRESENT.
+    // Overtime
+    attendance.overtimeMinutes = Math.max(
+      0,
+      Math.floor((attendance.outTime.getTime() - shiftEnd.getTime()) / 60000),
+    );
 
-        Similarly:
+    // Late Mark
+    if (attendance.earlyExitMinutes > policy.lateRule.allowedEarlyMinutes) {
+      attendance.isLate = true;
+    }
 
-        Logged in 3+ hours late → ABSENT
-        Worked 8 hours afterwards
+    // Attendance Status
+    const workedHours = workedMinutes / 60;
 
-        Still ABSENT according to your policy. */
+    attendance.isHalfDay = false;
+    attendance.attendanceStatus = attendanceType.PRESENT;
 
-    if (
-      statusPriority[attendanceStatus] >
-      statusPriority[attendance.attendanceStatus]
+    // Absent
+    if (workedHours < policy.lateRule.absentAfterLateHours) {
+      attendance.attendanceStatus = attendanceType.ABSENT;
+    }
+
+    // Half Day
+    else if (
+      workedHours >= policy.lateRule.halfDayWorkMinHours &&
+      workedHours <= policy.lateRule.halfDayWorkMaxHours
     ) {
-      attendance.attendanceStatus = attendanceStatus;
+      attendance.attendanceStatus = attendanceType.HALF_DAY;
+      attendance.isHalfDay = true;
     }
 
     await attendance.save({ session });
@@ -192,3 +213,26 @@ export const punchInOut = async (
     session.endSession();
   }
 };
+
+// let attendanceStatus = attendance.attendanceStatus;
+
+/* Why compare priorities?
+Example:
+    Employee logs in 2.5 hours late → HALF_DAY
+    Then works until midnight
+
+    They should remain HALF_DAY, not become PRESENT.
+
+    Similarly:
+
+    Logged in 3+ hours late → ABSENT
+    Worked 8 hours afterwards
+
+    Still ABSENT according to your policy. */
+
+// if (
+//   statusPriority[attendanceStatus] >
+//   statusPriority[attendance.attendanceStatus]
+// ) {
+//   attendance.attendanceStatus = attendanceStatus;
+// }
