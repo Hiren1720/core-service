@@ -29,42 +29,33 @@ const WorkHourSchema = new Schema(
 /* ---------------- Late Rules ---------------- */
 const LateRuleSchema = new Schema(
   {
-    graceLoginAfterMinutes: {
+    allowedLateMinutes: {
       type: Number,
-      default: 15,
+      default: 0,
     },
-
-    graceLoginBeforeMinutes: {
+    allowedEarlyMinutes: {
       type: Number,
-      default: 15,
+      default: 0,
     },
-
-    maxGracePerMonth: {
+    allowedLateCount: {
       type: Number,
-      default: 3,
+      default: 0,
     },
-
-    deductionValue: {
-      // more than maxGracePerMonth passed than cut
+    fullDayMinHours: {
       type: Number,
-      default: 0.5, // Half day salary
+      default: 0,
     },
-
-    halfDayAfterMinutes: {
-      //login
+    halfDayWorkMaxHours: {
       type: Number,
-      default: 120,
+      default: 0,
     },
-
-    halfDayBeforeMinutes: {
-      //logout
+    halfDayWorkMinHours: {
       type: Number,
-      default: 120,
+      default: 0,
     },
-
-    absentAfterMinutes: {
+    onAbsentSlarayDaysCut: {
       type: Number,
-      default: 180,
+      default: 0,
     },
   },
   { _id: false },
@@ -112,7 +103,6 @@ const SandwichRuleSchema = new Schema(
   },
   { _id: false },
 );
-
 
 /* ---------------- Carry forward leave ---------------- */
 const CarryForwardLeaveSchema = new Schema(
