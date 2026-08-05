@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { leaveEncasementType, status } from "../../../types/types";
+import { status } from "../../../types/types";
 
 /* ---------------- Work Hours ---------------- */
 const WorkHourSchema = new Schema(
@@ -22,16 +22,6 @@ const WorkHourSchema = new Schema(
         ],
       },
     ],
-
-    minimumHoursForHalfDay: {
-      type: Number,
-      default: 4,
-    },
-
-    minimumHoursForFullDay: {
-      type: Number,
-      default: 8,
-    },
   },
   { _id: false },
 );
@@ -123,27 +113,6 @@ const SandwichRuleSchema = new Schema(
   { _id: false },
 );
 
-/* ---------------- leave Encashment ---------------- */
-const LeaveEncashmentSchema = new Schema(
-  {
-    enabled: {
-      type: Boolean,
-      default: false,
-    },
-
-    maxLeaves: {
-      type: Number,
-      default: 1,
-    },
-
-    period: {
-      type: String,
-      enum: Object.values(leaveEncasementType),
-      default: leaveEncasementType.YEARLY,
-    },
-  },
-  { _id: false },
-);
 
 /* ---------------- Carry forward leave ---------------- */
 const CarryForwardLeaveSchema = new Schema(
@@ -245,7 +214,6 @@ const PolicySchema = new Schema(
     lateRule: LateRuleSchema,
     overtime: OvertimeSchema,
     sandwichRule: SandwichRuleSchema,
-    leaveEncashment: LeaveEncashmentSchema,
     carryForwardLeave: CarryForwardLeaveSchema,
     continuousLeave: ContinuousLeaveSchema,
     leaves: [LeaveSchema],

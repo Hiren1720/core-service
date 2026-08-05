@@ -49,11 +49,6 @@ export enum employmentTypeType {
   CONSULTANT = "CONSULTANT",
 }
 
-export enum leaveEncasementType {
-  YEARLY = "YEARLY",
-  FULL_FINAL = "FULL_FINAL",
-}
-
 export enum leaveStatusType {
   PENDING = "PENDING",
   APPROVED = "APPROVED",

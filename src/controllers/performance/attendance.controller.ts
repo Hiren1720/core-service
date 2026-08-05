@@ -143,7 +143,9 @@ export const punchInOut = async (
       await session.abortTransaction();
       return res
         .status(400)
-        .json(ApiResponse.error("Punch-in time is missing for this attendance"));
+        .json(
+          ApiResponse.error("Punch-in time is missing for this attendance"),
+        );
     }
 
     attendance.totalWorkedMinutes = Math.max(
@@ -155,20 +157,6 @@ export const punchInOut = async (
     );
 
     let attendanceStatus = attendance.attendanceStatus;
-    switch (true) {
-      case attendance.totalWorkedMinutes <
-        policy.workHours.minimumHoursForHalfDay * 60:
-        attendanceStatus = attendanceType.ABSENT;
-        break;
-
-      case attendance.totalWorkedMinutes <
-        policy.workHours.minimumHoursForFullDay * 60:
-        attendanceStatus = attendanceType.HALF_DAY;
-        break;
-
-      default:
-        attendanceStatus = attendanceType.PRESENT;
-    }
 
     /* Why compare priorities?
     Example:
