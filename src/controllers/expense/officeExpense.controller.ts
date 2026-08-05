@@ -21,14 +21,11 @@ export const createOfficeExpense = async (
     const {
       name,
       branchId,
-      expenseType,
-      serviceType,
       date,
       description,
       amount,
       paymentMode,
       transactionId,
-      vendor,
     } = req.body;
 
     if (!name?.trim()) {
@@ -64,20 +61,14 @@ export const createOfficeExpense = async (
       });
     }
 
-    const vendorDetails =
-      typeof vendor === "string" ? JSON.parse(vendor) : vendor || {};
-
     await OfficeExpenseModel.create(
       [
         {
           companyId,
           branchId,
           name: name.trim(),
-          serviceType,
-          expenseType,
           date,
           description: description?.trim() || "",
-          vendor: vendorDetails,
           amount: Number(amount),
           paymentMode,
           transactionId,

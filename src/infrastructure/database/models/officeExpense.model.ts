@@ -14,11 +14,6 @@ const OfficeExpenseSchema = new Schema(
       ref: "Branch",
       required: true,
     },
-    expenseType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
     name: {
       type: String,
       required: true,
@@ -28,44 +23,9 @@ const OfficeExpenseSchema = new Schema(
       type: Date,
       required: true,
     },
-    serviceType: {
-      type: String,
-      trim: true,
-    },
     description: {
       type: String,
       trim: true,
-    },
-
-    vendor: {
-      name: {
-        type: String,
-        trim: true,
-      },
-      company: {
-        type: String,
-        trim: true,
-      },
-      phone: {
-        type: String,
-        trim: true,
-      },
-      isOnWarranty: {
-        type: Boolean,
-        default: false,
-      },
-      startDate: {
-        type: Date,
-        default: null,
-      },
-      endDate: {
-        type: Date,
-        default: null,
-      },
-      description: {
-        type: String,
-        trim: true,
-      },
     },
 
     amount: {
