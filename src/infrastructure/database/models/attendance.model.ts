@@ -9,11 +9,15 @@ const AttendanceSchema = new Schema(
       required: true,
       index: true,
     },
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
 
     attendanceDate: {
       type: Date,
       required: true,
-      index: true,
     },
 
     inTime: {
@@ -99,6 +103,17 @@ const AttendanceSchema = new Schema(
 AttendanceSchema.index({
   userId: 1,
   attendanceDate: 1,
+});
+
+AttendanceSchema.index({
+ companyId:1,
+ attendanceDate:1
+});
+
+AttendanceSchema.index({
+ companyId:1,
+ userId:1,
+ attendanceDate:1
 });
 
 export const AttendanceModel = model("Attendance", AttendanceSchema);

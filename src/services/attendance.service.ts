@@ -45,6 +45,7 @@ export const createDailyAttendance = async () => {
 
     const users = await UserModel.find({
       status: userStatus.ACTIVE,
+      role: { $ne: "OWNER" },
     })
       .select("_id companyId")
       .lean();
