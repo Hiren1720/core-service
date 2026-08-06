@@ -70,6 +70,7 @@ export const punchInOut = async (
       return res.status(404).json(ApiResponse.error("Policy not assigned"));
     }
 
+    // Don't allow punch in for finalized attendance
     const restrictedStatus = [
       attendanceType.HOLIDAY,
       attendanceType.WEEK_OFF,
@@ -117,12 +118,6 @@ export const punchInOut = async (
 
       // Late Mark
       attendance.isLate = lateMinutes > policy.lateRule.allowedLateMinutes;
-
-      // Half Day Candidate
-      // Employee came very late.
-      // Working hours will be verified during punch out.
-      attendance.isHalfDay =
-        lateMinutes >= policy.lateRule.halfDayWorkMaxHours * 60;
       attendance.attendanceStatus = attendanceType.PRESENT;
 
       await attendance.save({ session });
@@ -183,11 +178,10 @@ export const punchInOut = async (
     // Attendance Status
     const workedHours = workedMinutes / 60;
 
-    attendance.isHalfDay = false;
     attendance.attendanceStatus = attendanceType.PRESENT;
 
     // Absent
-    if (workedHours < policy.lateRule.absentAfterLateHours) {
+    if (workedHours < policy.lateRule.fullDayMinHours) {
       attendance.attendanceStatus = attendanceType.ABSENT;
     }
 
@@ -196,7 +190,7 @@ export const punchInOut = async (
       workedHours >= policy.lateRule.halfDayWorkMinHours &&
       workedHours <= policy.lateRule.halfDayWorkMaxHours
     ) {
-      attendance.attendanceStatus = attendanceType.HALF_DAY;
+      attendance.attendanceStatus = attendanceType.PRESENT;
       attendance.isHalfDay = true;
     }
 
@@ -236,3 +230,14 @@ Example:
 // ) {
 //   attendance.attendanceStatus = attendanceStatus;
 // }
+
+// attendance.overtimeMinutes =
+// Math.max(
+// 0,
+// Math.floor(
+// (now.getTime()-shiftEnd.getTime())/60000
+// )
+// );
+
+// attendance.isOvertime =
+// attendance.overtimeMinutes > 0;
