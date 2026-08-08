@@ -335,3 +335,129 @@ export const updateLeaveApplicationStatus = async (
     session.endSession();
   }
 };
+
+export const getLeavesApplications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const page = Number(req.query.page) || 1;
+
+    const limit = Number(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search?.toString() || "";
+
+    const status = req.query.status?.toString();
+
+    const filter: any = {};
+
+    // if (search) {
+    //   filter.name = {
+    //     $regex: search,
+    //     $options: "i",
+    //   };
+    // }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const [leaves, total] = await Promise.all([
+      LeaveRequestModel.find(filter)
+        .populate("userId", "firstName lastName profileImage role")
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      LeaveRequestModel.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          leaves,
+          total,
+        },
+        "Leave applications fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLeaveApplicationCount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const filter: any = {};
+
+    const [approved, rejected, pending] = await Promise.all([
+      LeaveRequestModel.countDocuments({
+        ...filter,
+        status: leaveStatusType.APPROVED,
+      }),
+      LeaveRequestModel.countDocuments({
+        ...filter,
+        status: leaveStatusType.REJECTED,
+      }),
+      LeaveRequestModel.countDocuments({
+        ...filter,
+        status: leaveStatusType.PENDING,
+      }),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          total: approved + rejected + pending,
+          approved,
+          rejected,
+          pending,
+        },
+        "Leave application counts fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getLeaveApplicationById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const leaveRequestId = req.params.leaveRequestId;
+
+    const leaveRequest = await LeaveRequestModel.findById(leaveRequestId)
+      .populate("userId", "firstName lastName profileImage role")
+      .lean();
+
+    if (!leaveRequest) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Leave application not found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          leaveRequest,
+          "Leave application fetched successfully",
+        ),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
