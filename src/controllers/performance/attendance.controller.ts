@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { AttendanceModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { attendanceType } from "../../types/types";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const getAttendanceByDate = async (
   req: Request,
@@ -20,7 +21,7 @@ export const getAttendanceByDate = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
-      attendanceDate: new Date(date as string),
+      attendanceDate: normalizeDate(new Date(date as string)),
     };
 
     const [result, count] = await Promise.all([

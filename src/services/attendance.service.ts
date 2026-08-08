@@ -54,13 +54,9 @@ export const createDailyAttendance = async () => {
   try {
     session.startTransaction();
 
-    const today = normalizeDate(new Date());
+    const today = new Date();
 
-    const attendanceDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
+    const attendanceDate = normalizeDate(today)
 
     const users = await UserModel.find({
       status: userStatus.ACTIVE,
