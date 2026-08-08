@@ -17,6 +17,7 @@ export const createPromotion = async (
   next: NextFunction,
 ) => {
   try {
+    const { id: assignedBy } = req.user!;
     const { userId, designationId, effectiveDate, reason } = req.body;
 
     const promotion = await PromotionModel.create({
@@ -25,6 +26,14 @@ export const createPromotion = async (
       designationId,
       effectiveDate: normalizeDate(effectiveDate),
       reason,
+    });
+
+    await addUserHistory({
+      userId: userId,
+      field: "promotionStatus",
+      fieldValue: promotionStatus.HOLD,
+      remarks: "",
+      assignedBy,
     });
 
     return res
@@ -53,6 +62,7 @@ export const getPromotions = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      status: { $ne: promotionStatus.CANCEL },
     };
 
     // if (search) {
@@ -104,7 +114,7 @@ export const getPromotionCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [promoted, hold, cancel] = await Promise.all([
+    const [promoted, hold] = await Promise.all([
       PromotionModel.countDocuments({
         ...filter,
         status: "PROMOTED" as promotionStatus,
@@ -113,19 +123,19 @@ export const getPromotionCount = async (
         ...filter,
         status: "HOLD" as promotionStatus,
       }),
-      PromotionModel.countDocuments({
-        ...filter,
-        status: "CANCEL" as promotionStatus,
-      }),
+      // PromotionModel.countDocuments({
+      //   ...filter,
+      //   status: "CANCEL" as promotionStatus,
+      // }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: promoted + hold + cancel,
+          total: promoted + hold,
           promoted,
           hold,
-          cancel,
+          // cancel,
         },
         "Promotion counts fetched successfully",
       ),
@@ -181,7 +191,8 @@ export const updatePromotion = async (
 
     if (designationId !== undefined) promotion.designationId = designationId;
 
-    if (effectiveDate !== undefined) promotion.effectiveDate = normalizeDate(effectiveDate);
+    if (effectiveDate !== undefined)
+      promotion.effectiveDate = normalizeDate(effectiveDate);
 
     if (reason !== undefined) promotion.reason = reason;
 

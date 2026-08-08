@@ -41,7 +41,7 @@ const TerminationSchema = new Schema(
     status: {
       type: String,
       enum: Object.values(terminationStatus),
-      default: terminationStatus.HOLD,
+      default: terminationStatus.TERMINATE,
     },
   },
   {

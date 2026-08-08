@@ -16,6 +16,7 @@ export const createTermination = async (
   next: NextFunction,
 ) => {
   try {
+    const { id: assignedBy } = req.user!;
     const { userId, terminationType, lastWorkingDate, reason } = req.body;
 
     const termination = await TerminationModel.create({
@@ -24,6 +25,14 @@ export const createTermination = async (
       terminationType,
       lastWorkingDate: normalizeDate(lastWorkingDate),
       reason,
+    });
+
+    await addUserHistory({
+      userId: userId,
+      field: "terminationStatus",
+      fieldValue: terminationStatus.TERMINATE,
+      remarks: "",
+      assignedBy,
     });
 
     return res
@@ -54,6 +63,7 @@ export const getTerminations = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      status: { $ne: terminationStatus.CANCEL },
     };
 
     // if (search) {
@@ -111,7 +121,7 @@ export const getTerminationCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [terminate, hold, cancel] = await Promise.all([
+    const [terminate, hold] = await Promise.all([
       TerminationModel.countDocuments({
         ...filter,
         status: "TERMINATE" as terminationStatus,
@@ -120,19 +130,19 @@ export const getTerminationCount = async (
         ...filter,
         status: "HOLD" as terminationStatus,
       }),
-      TerminationModel.countDocuments({
-        ...filter,
-        status: "CANCEL" as terminationStatus,
-      }),
+      // TerminationModel.countDocuments({
+      //   ...filter,
+      //   status: "CANCEL" as terminationStatus,
+      // }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: terminate + hold + cancel,
+          total: terminate + hold,
           terminate,
           hold,
-          cancel,
+          // cancel,
         },
         "Termination counts fetched successfully",
       ),

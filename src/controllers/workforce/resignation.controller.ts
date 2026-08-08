@@ -16,6 +16,7 @@ export const createResignation = async (
   next: NextFunction,
 ) => {
   try {
+    const { id: assignedBy } = req.user!;
     const { userId, lastWorkingDate, reason } = req.body;
 
     const resignation = await ResignationModel.create({
@@ -23,6 +24,14 @@ export const createResignation = async (
       userId,
       lastWorkingDate: normalizeDate(lastWorkingDate),
       reason,
+    });
+
+    await addUserHistory({
+      userId: userId,
+      field: "resignationStatus",
+      fieldValue: resignationStatus.PENDING,
+      remarks: "",
+      assignedBy,
     });
 
     return res

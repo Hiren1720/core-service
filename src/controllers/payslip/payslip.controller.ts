@@ -44,6 +44,7 @@ export const getPayslips = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      status: { $ne: "DELETED" as status },
     };
 
     if (search) {
@@ -93,19 +94,19 @@ export const getPayslipsCount = async (
       companyId: req.user!.companyId,
     };
 
-    const [active, inactive, deleted] = await Promise.all([
+    const [active, inactive] = await Promise.all([
       PayslipModel.countDocuments({ ...filter, status: "ACTIVE" as status }),
       PayslipModel.countDocuments({ ...filter, status: "INACTIVE" as status }),
-      PayslipModel.countDocuments({ ...filter, status: "DELETED" as status }),
+      // PayslipModel.countDocuments({ ...filter, status: "DELETED" as status }),
     ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: active + inactive + deleted,
+          total: active + inactive,
           active,
           inactive,
-          deleted,
+          // deleted,
         },
         "Payslip counts fetched successfully",
       ),
