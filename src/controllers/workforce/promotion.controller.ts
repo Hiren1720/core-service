@@ -9,6 +9,7 @@ import { addUserHistory } from "../../shared/services/userHistory.service";
 import { promotionStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { promotionTemplate } from "../../shared/templates/promotion";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const createPromotion = async (
   req: Request,
@@ -22,7 +23,7 @@ export const createPromotion = async (
       companyId: req.user!.companyId,
       userId,
       designationId,
-      effectiveDate,
+      effectiveDate: normalizeDate(effectiveDate),
       reason,
     });
 
@@ -180,7 +181,7 @@ export const updatePromotion = async (
 
     if (designationId !== undefined) promotion.designationId = designationId;
 
-    if (effectiveDate !== undefined) promotion.effectiveDate = effectiveDate;
+    if (effectiveDate !== undefined) promotion.effectiveDate = normalizeDate(effectiveDate);
 
     if (reason !== undefined) promotion.reason = reason;
 

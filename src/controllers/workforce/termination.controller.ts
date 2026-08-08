@@ -8,6 +8,7 @@ import { addUserHistory } from "../../shared/services/userHistory.service";
 import { terminationStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { terminationTemplate } from "../../shared/templates/termination";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const createTermination = async (
   req: Request,
@@ -21,7 +22,7 @@ export const createTermination = async (
       companyId: req.user!.companyId,
       userId,
       terminationType,
-      lastWorkingDate,
+      lastWorkingDate: normalizeDate(lastWorkingDate),
       reason,
     });
 
@@ -189,7 +190,7 @@ export const updateTermination = async (
       termination.terminationType = terminationType;
 
     if (lastWorkingDate !== undefined)
-      termination.lastWorkingDate = lastWorkingDate;
+      termination.lastWorkingDate = normalizeDate(lastWorkingDate);
 
     if (reason !== undefined) termination.reason = reason;
 

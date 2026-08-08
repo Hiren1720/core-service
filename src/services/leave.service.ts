@@ -59,3 +59,36 @@ export const generateUserLeaveBalance = async ({
     { session },
   );
 };
+
+export const validateLeaveBalance = async (
+  userId: string,
+  leaveId: string,
+  totalDays: number,
+) => {
+  const currentYear = new Date().getFullYear();
+
+  const leaveBalance = await UserLeaveBalanceModel.findOne({
+    userId,
+    leaveId,
+    year: currentYear,
+  });
+
+  if (!leaveBalance) {
+    throw new Error("Leave balance not found");
+  }
+
+  const availableLeaves =
+    leaveBalance.allocated +
+    leaveBalance.carryForward -
+    leaveBalance.used -
+    leaveBalance.pendingApproval -
+    leaveBalance.encashed;
+
+  if (availableLeaves < totalDays) {
+    throw new Error(
+      `Insufficient leave balance. Available leaves: ${availableLeaves}`,
+    );
+  }
+
+  return leaveBalance;
+};

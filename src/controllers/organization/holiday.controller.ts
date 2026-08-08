@@ -3,6 +3,7 @@ import { HolidayModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const createHoliday = async (
   req: Request,
@@ -15,8 +16,8 @@ export const createHoliday = async (
     const holiday = await HolidayModel.create({
       companyId: req.user!.companyId,
       name,
-      startDate,
-      endDate,
+      startDate: normalizeDate(startDate),
+      endDate: normalizeDate(endDate),
       description,
       effectiveYear,
     });
@@ -175,9 +176,9 @@ export const updateHoliday = async (
 
     if (name !== undefined) holiday.name = name;
 
-    if (startDate !== undefined) holiday.startDate = startDate;
+    if (startDate !== undefined) holiday.startDate = normalizeDate(startDate);
 
-    if (endDate !== undefined) holiday.endDate = endDate;
+    if (endDate !== undefined) holiday.endDate = normalizeDate(endDate);
 
     if (description !== undefined) holiday.description = description;
 

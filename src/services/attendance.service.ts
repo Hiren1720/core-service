@@ -10,6 +10,7 @@ import {
 } from "../infrastructure/database/models";
 
 import { attendanceType, leaveStatusType, userStatus } from "../types/types";
+import { normalizeDate } from "../shared/helpers/dateHelper";
 
 const weekDays = [
   "SUNDAY",
@@ -22,11 +23,29 @@ const weekDays = [
 ];
 
 const getSaturdayRule = (date: Date) => {
-  if (date.getDay() !== 6) return null;
+  const day = date.getDay();
+
+  // Sunday
+  if (day === 0) {
+    return "SUNDAY";
+  }
+
+  // Not Saturday
+  if (day !== 6) {
+    return null;
+  }
 
   const occurrence = Math.ceil(date.getDate() / 7);
 
-  return `${occurrence}SATURDAY`;
+  const ordinalMap: Record<number, string> = {
+    1: "1st",
+    2: "2nd",
+    3: "3rd",
+    4: "4th",
+    5: "5th",
+  };
+
+  return `${ordinalMap[occurrence]}SATURDAY`;
 };
 
 export const createDailyAttendance = async () => {
@@ -35,7 +54,7 @@ export const createDailyAttendance = async () => {
   try {
     session.startTransaction();
 
-    const today = new Date();
+    const today = normalizeDate(new Date());
 
     const attendanceDate = new Date(
       today.getFullYear(),
@@ -65,7 +84,7 @@ export const createDailyAttendance = async () => {
       //---------------------------------------
       // Leave
       //---------------------------------------
-
+      let leaveRequestId = null;
       const leave = await LeaveRequestModel.exists({
         userId: user._id,
         status: leaveStatusType.APPROVED,
@@ -79,6 +98,7 @@ export const createDailyAttendance = async () => {
 
       if (leave) {
         attendanceStatus = attendanceType.LEAVE;
+        leaveRequestId = leave._id;
       }
 
       //---------------------------------------
@@ -119,7 +139,6 @@ export const createDailyAttendance = async () => {
         if (policy) {
           const weekday = weekDays[today.getDay()];
           const saturdayRule = getSaturdayRule(today);
-
           const weeklyOffs = policy.workHours?.weeklyOffs || [];
 
           if (
@@ -135,8 +154,10 @@ export const createDailyAttendance = async () => {
         insertOne: {
           document: {
             userId: user._id,
+            companyId: user.companyId,
             attendanceDate,
             attendanceStatus,
+            leaveRequestId,
           },
         },
       });
@@ -154,5 +175,123 @@ export const createDailyAttendance = async () => {
     throw error;
   } finally {
     session.endSession();
+  }
+};
+
+export const createUserDaySpecificAttendance = async (
+  userId: string,
+  date: Date,
+) => {
+  try {
+    const today = new Date(date);
+    const attendanceDate = normalizeDate(date);
+
+    const user = await UserModel.findById(userId)
+      .select("_id companyId")
+      .lean();
+
+    if (!user) return null;
+
+    const exists = await AttendanceModel.exists({
+      userId: user._id,
+      attendanceDate,
+    });
+
+    if (exists) return null;
+
+    let attendanceStatus = attendanceType.ABSENT;
+
+    //---------------------------------------
+    // Leave
+    //---------------------------------------
+    let leaveRequestId = null;
+    const leave = await LeaveRequestModel.exists({
+      userId: user._id,
+      status: leaveStatusType.APPROVED,
+      startDate: {
+        $lte: attendanceDate,
+      },
+      endDate: {
+        $gte: attendanceDate,
+      },
+    });
+
+    if (leave) {
+      attendanceStatus = attendanceType.LEAVE;
+      leaveRequestId = leave._id;
+    }
+
+    //---------------------------------------
+    // Holiday
+    //---------------------------------------
+    if (attendanceStatus === attendanceType.ABSENT) {
+      const holiday = await HolidayModel.exists({
+        companyId: user.companyId,
+        startDate: {
+          $lte: attendanceDate,
+        },
+        endDate: {
+          $gte: attendanceDate,
+        },
+      });
+
+      if (holiday) {
+        attendanceStatus = attendanceType.HOLIDAY;
+      }
+    }
+
+    //---------------------------------------
+    // Weekly Off
+    //---------------------------------------
+    if (attendanceStatus === attendanceType.ABSENT) {
+      const userPolicy = await UserPolicyModel.findOne({
+        userId: user._id,
+      })
+        .sort({
+          createdAt: -1,
+        })
+        .populate("policyId");
+
+      const policy: any = userPolicy?.policyId;
+
+      if (policy) {
+        const weekday = weekDays[today.getDay()];
+        const saturdayRule = getSaturdayRule(today);
+
+        const weeklyOffs = policy.workHours?.weeklyOffs || [];
+
+        if (
+          weeklyOffs.includes(weekday) ||
+          (saturdayRule && weeklyOffs.includes(saturdayRule))
+        ) {
+          attendanceStatus = attendanceType.WEEK_OFF;
+        }
+      }
+    }
+
+    if (attendanceType.ABSENT === attendanceStatus) return null;
+
+    const attendance = new AttendanceModel({
+      userId: user._id,
+      companyId: user.companyId,
+      attendanceDate,
+      attendanceStatus,
+      leaveRequestId,
+    });
+
+    if (leaveRequestId) {
+      await attendance.populate({
+        path: "leaveRequestId",
+        select: "duration",
+        populate: {
+          path: "leaveId",
+          select: "name",
+        },
+      });
+    }
+
+    return attendance.toObject();
+  } catch (error) {
+    throw error;
   }
 };

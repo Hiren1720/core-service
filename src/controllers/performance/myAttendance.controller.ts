@@ -7,6 +7,8 @@ import {
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { attendanceType } from "../../types/types";
+import { createUserDaySpecificAttendance } from "../../services/attendance.service";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 const statusPriority: Record<string, number> = {
   PRESENT: 1,
@@ -28,11 +30,7 @@ export const punchInOut = async (
     const { latitude, longitude, address, method = "MOBILE" } = req.body;
 
     const now = new Date();
-    const attendanceDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const attendanceDate = normalizeDate(now);
 
     const [attendance, userShift, userPolicy] = await Promise.all([
       AttendanceModel.findOne({
@@ -251,11 +249,7 @@ export const getMyTodayStatus = async (
     const { id: userId } = req.user!;
 
     const today = new Date();
-    const attendanceDate = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
+    const attendanceDate = normalizeDate(today)
 
     const attendance = await AttendanceModel.findOne({
       userId,
@@ -274,4 +268,125 @@ export const getMyTodayStatus = async (
   } catch (error) {
     next(error);
   }
+};
+
+export const getAttendanceByMonth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId } = req.query;
+    const { month, year } = req.query;
+
+    if (!userId || !month || !year) {
+      return res.status(400).json({
+        message: "userId, month and year are required",
+      });
+    }
+
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+
+    if (monthNumber < 1 || monthNumber > 12 || !yearNumber) {
+      return res.status(400).json({
+        message: "Invalid month or year",
+      });
+    }
+
+    const startDate = new Date(yearNumber, monthNumber - 1, 1);
+
+    const endDate = new Date(yearNumber, monthNumber, 0);
+
+    endDate.setHours(23, 59, 59, 999);
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+      userId,
+      attendanceDate: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    };
+
+    const [attendanceRecords, generatedDays] = await Promise.all([
+      AttendanceModel.find(filter)
+        .populate("userId", "firstName lastName profileImage role status")
+        .populate([
+          {
+            path: "leaveRequestId",
+            select: "duration",
+            populate: {
+              path: "leaveId",
+              select: "name",
+            },
+          },
+        ])
+        .select(
+          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes earlyExitMinutes leaveRequestId",
+        )
+        .sort({ attendanceDate: 1 })
+        .lean(),
+
+      // Generate missing/future days
+      createMonthlyDaySpecificAttendance(userId as string, startDate, endDate),
+    ]);
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          list: [...generatedDays],
+        },
+        "Attendance fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createMonthlyDaySpecificAttendance = async (
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+) => {
+  const result: any[] = [];
+
+  const today = new Date();
+
+  // Remove time for date-only comparison
+  today.setHours(0, 0, 0, 0);
+
+  let currentDate: Date;
+
+  // Requested month is completely in the past
+  if (endDate < today) {
+    return result;
+  }
+
+  // Requested month is the current month
+  if (
+    startDate.getFullYear() === today.getFullYear() &&
+    startDate.getMonth() === today.getMonth()
+  ) {
+    currentDate = new Date(today);
+
+    // Start from tomorrow
+    currentDate.setDate(currentDate.getDate() + 1);
+  } else {
+    // Future month
+    currentDate = new Date(startDate);
+  }
+
+  const dates: Date[] = [];
+  while (currentDate <= endDate) {
+    dates.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  const attendanceResults = await Promise.all(
+    dates.map((date) => createUserDaySpecificAttendance(userId, date)),
+  );
+
+  return attendanceResults.filter((attendance) => attendance !== null);
 };

@@ -63,6 +63,10 @@ const AttendanceSchema = new Schema(
       type: Number,
       default: 0,
     },
+    overtimeApproved: {
+      type: Boolean,
+      default: false,
+    },
 
     lateMinutes: {
       type: Number,
@@ -72,7 +76,7 @@ const AttendanceSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    
+
     isHalfDay: {
       type: Boolean,
       default: false,
@@ -88,11 +92,17 @@ const AttendanceSchema = new Schema(
       enum: Object.values(attendanceType),
       default: attendanceType.PRESENT,
     },
+    leaveRequestId: {
+      type: Schema.Types.ObjectId,
+      ref: "LeaveRequest",
+      default: null,
+    },
 
     autoClosed: {
       type: Boolean,
       default: false,
     },
+
   },
   {
     timestamps: true,
@@ -106,14 +116,14 @@ AttendanceSchema.index({
 });
 
 AttendanceSchema.index({
- companyId:1,
- attendanceDate:1
+  companyId: 1,
+  attendanceDate: 1,
 });
 
 AttendanceSchema.index({
- companyId:1,
- userId:1,
- attendanceDate:1
+  companyId: 1,
+  userId: 1,
+  attendanceDate: 1,
 });
 
 export const AttendanceModel = model("Attendance", AttendanceSchema);

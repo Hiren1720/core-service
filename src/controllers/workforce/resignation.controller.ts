@@ -8,6 +8,7 @@ import { addUserHistory } from "../../shared/services/userHistory.service";
 import { resignationStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { resignationAcceptedTemplate } from "../../shared/templates/resignationAccepted";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const createResignation = async (
   req: Request,
@@ -20,7 +21,7 @@ export const createResignation = async (
     const resignation = await ResignationModel.create({
       companyId: req.user!.companyId,
       userId,
-      lastWorkingDate,
+      lastWorkingDate: normalizeDate(lastWorkingDate),
       reason,
     });
 
@@ -185,7 +186,7 @@ export const updateResignation = async (
     if (userId !== undefined) resignation.userId = userId;
 
     if (lastWorkingDate !== undefined)
-      resignation.lastWorkingDate = lastWorkingDate;
+      resignation.lastWorkingDate = normalizeDate(lastWorkingDate);
 
     if (reason !== undefined) resignation.reason = reason;
 

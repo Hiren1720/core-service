@@ -1,9 +1,5 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
-import {
-  LeaveRequestModel,
-  UserLeaveBalanceModel,
-} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import {
   validateContinuousLeave,
@@ -11,7 +7,14 @@ import {
   validateLeavePolicy,
 } from "../../services/validateLeavePolicy";
 import { calculateLeaveDays } from "../../services/calculateLeaveDays";
+import {
+  LeaveRequestModel,
+  UserLeaveBalanceModel,
+} from "../../infrastructure/database/models";
+import { leaveStatusType } from "../../types/types";
+import { validateLeaveBalance } from "../../services/leave.service";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const applyLeave = async (
   req: Request,
@@ -23,83 +26,107 @@ export const applyLeave = async (
   try {
     session.startTransaction();
 
-    const id = req.user!.id;
-    const companyId = req.user!.companyId;
+    const userId = req.user!.id;
+    const companyId = req.user!.companyId as string;
+
     const {
-      userId: bodyUserId, // comes when manager apply leave
       leaveId,
       startDate,
       endDate,
-      duration,
-      reason,
+      duration = "FULL_DAY",
+      reason = "",
     } = req.body;
-    const userId = bodyUserId ?? id;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    if (!leaveId || !startDate || !endDate) {
+      await session.abortTransaction();
 
-    if (start > end) {
-      return res.status(400).json(ApiResponse.error("Invalid date range"));
+      return res
+        .status(400)
+        .json(ApiResponse.error("leaveId, startDate and endDate are required"));
     }
 
+    const start = normalizeDate(startDate);
+    const end = normalizeDate(endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      await session.abortTransaction();
+
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invalid start or end date"));
+    }
+
+    if (start > end) {
+      await session.abortTransaction();
+
+      return res
+        .status(400)
+        .json(ApiResponse.error("Start date cannot be greater than end date"));
+    }
+
+    // --------------------------------------------------
+    // Get user's current leave policy
+    // --------------------------------------------------
     const { policy } = await validateLeavePolicy({
       userId,
       leaveId,
       startDate: start,
     });
 
-    await validateLeaveOverlap(userId, start, end);
+    // --------------------------------------------------
+    // Get weekly offs from policy
+    // --------------------------------------------------
+    const weeklyOffs = policy.workHours?.weeklyOffs || [];
 
+    // --------------------------------------------------
+    // Calculate actual leave days.
+    // Weekly offs and company holidays are excluded.
+    // --------------------------------------------------
     const totalDays = await calculateLeaveDays({
-      companyId: companyId as string,
+      companyId,
       startDate: start,
       endDate: end,
       duration,
-      weeklyOffs: policy.workHours.weeklyOffs,
+      weeklyOffs,
     });
 
     if (totalDays <= 0) {
+      await session.abortTransaction();
+
       return res
         .status(400)
         .json(
-          ApiResponse.error(
-            "Selected dates contain only holidays or weekly offs",
-          ),
+          ApiResponse.error("No working days available for selected dates"),
         );
     }
 
-    const userLeave = await UserLeaveBalanceModel.find({
-      userId,
-      year: new Date().getFullYear()
-    });
+    // --------------------------------------------------
+    // Check overlapping leave
+    // --------------------------------------------------
+    await validateLeaveOverlap(userId, start, end);
 
-    if (!userLeave) {
-      return res.status(404).json(ApiResponse.error("Leave balance not found"));
+    // --------------------------------------------------
+    // Check continuous leave rule
+    // --------------------------------------------------
+    if (policy.continuousLeave?.enabled) {
+      await validateContinuousLeave({
+        userId,
+        startDate: start,
+        endDate: end,
+        maxLeaves: policy.continuousLeave.maxLeaves,
+        enabled: policy.continuousLeave.enabled,
+      });
     }
 
-    const leaveBalance = userLeave.find(
-      (x: any) => x.leaveId.toString() === leaveId,
-    );
+    // --------------------------------------------------
+    // Check available leave balance
+    // --------------------------------------------------
+    const leaveBalance = await validateLeaveBalance(userId, leaveId, totalDays);
 
-    if (!leaveBalance) {
-      return res.status(400).json(ApiResponse.error("Leave not assigned"));
-    }
-
-    if ((leaveBalance.allocated - leaveBalance.used) < totalDays) {
-      return res
-        .status(400)
-        .json(ApiResponse.error("Insufficient leave balance"));
-    }
-
-    await validateContinuousLeave({
-      userId,
-      startDate: start,
-      endDate: end,
-      enabled: policy.continuousLeave.enabled,
-      maxLeaves: policy.continuousLeave.maxLeaves,
-    });
-
-    await LeaveRequestModel.create(
+    // --------------------------------------------------
+    // Create leave request
+    // --------------------------------------------------
+    const [leaveRequest] = await LeaveRequestModel.create(
       [
         {
           userId,
@@ -109,6 +136,7 @@ export const applyLeave = async (
           duration,
           totalDays,
           reason,
+          status: leaveStatusType.PENDING,
         },
       ],
       {
@@ -116,28 +144,192 @@ export const applyLeave = async (
       },
     );
 
-    // leaveBalance.pending += totalDays;
+    // --------------------------------------------------
+    // Reserve leave days as pending
+    // --------------------------------------------------
 
-    // await userLeave.save({ session });
+    leaveBalance.pendingApproval += totalDays;
 
-    // await addUserHistory(
-    //   {
-    //     userId,
-    //     field: "LeaveApplication",
-    //     fieldValue: leaveId,
-    //     remarks: reason,
-    //     assignedBy: userId,
-    //   },
-    //   session,
-    // );
+    await leaveBalance.save({
+      session,
+    });
+
+    // --------------------------------------------------
+    // History
+    // --------------------------------------------------
+    await addUserHistory(
+      {
+        userId,
+        field: "leaveApplicationStatus",
+        fieldValue: "PENDING",
+        remarks: reason,
+        assignedBy: userId,
+      },
+      session,
+    );
 
     await session.commitTransaction();
 
     return res
       .status(201)
-      .json(ApiResponse.success(null, "Leave applied successfully"));
+      .json(ApiResponse.success(leaveRequest, "Leave applied successfully"));
+  } catch (error: any) {
+    await session.abortTransaction();
+
+    return res
+      .status(400)
+      .json(ApiResponse.error(error?.message || "Failed to apply leave"));
+  } finally {
+    session.endSession();
+  }
+};
+
+export const updateLeaveApplicationStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { status, remarks = "" } = req.body;
+    const leaveRequestId = req.params.leaveRequestId;
+    // --------------------------------------------------
+    // Validate requested status
+    // --------------------------------------------------
+
+    if (
+      ![leaveStatusType.APPROVED, leaveStatusType.REJECTED].includes(status)
+    ) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            "Invalid status. Only APPROVED or REJECTED is allowed",
+          ),
+        );
+    }
+
+    // --------------------------------------------------
+    // Find pending leave request
+    // --------------------------------------------------
+    const leaveRequest =
+      await LeaveRequestModel.findById(leaveRequestId).session(session);
+
+    if (!leaveRequest) {
+      await session.abortTransaction();
+      return res.status(404).json(ApiResponse.error("Leave request not found"));
+    }
+
+    // --------------------------------------------------
+    // Only PENDING requests can be processed
+    // --------------------------------------------------
+    if (leaveRequest.status !== leaveStatusType.PENDING) {
+      await session.abortTransaction();
+      return res.status(400).json(ApiResponse.error("Leave already processed"));
+    }
+
+    // --------------------------------------------------
+    // Find user's leave balance
+    // --------------------------------------------------
+
+    const year = leaveRequest.startDate.getFullYear();
+
+    const leaveBalance = await UserLeaveBalanceModel.findOne({
+      userId: leaveRequest.userId,
+      leaveId: leaveRequest.leaveId,
+      year,
+    }).session(session);
+
+    if (!leaveBalance) {
+      await session.abortTransaction();
+      return res
+        .status(404)
+        .json(ApiResponse.error("User leave balance not found"));
+    }
+
+    const totalDays = leaveRequest.totalDays;
+
+    // --------------------------------------------------
+    // APPROVE
+    // --------------------------------------------------
+
+    if (status === leaveStatusType.APPROVED) {
+      if (leaveBalance.pendingApproval < totalDays) {
+        await session.abortTransaction();
+
+        return res
+          .status(400)
+          .json(ApiResponse.error("Invalid pending leave balance"));
+      }
+
+      leaveBalance.pendingApproval -= totalDays;
+      leaveBalance.used += totalDays;
+    }
+
+    // --------------------------------------------------
+    // REJECT
+    // --------------------------------------------------
+
+    if (status === leaveStatusType.REJECTED) {
+      if (leaveBalance.pendingApproval < totalDays) {
+        await session.abortTransaction();
+
+        return res
+          .status(400)
+          .json(ApiResponse.error("Invalid pending leave balance"));
+      }
+
+      leaveBalance.pendingApproval -= totalDays;
+    }
+
+    // --------------------------------------------------
+    // Update leave request
+    // --------------------------------------------------
+
+    leaveRequest.status = status;
+    leaveRequest.approvedBy = new mongoose.Types.ObjectId(req.user!.id);
+    leaveRequest.approvedAt = new Date();
+    leaveRequest.remarks = remarks;
+
+    // --------------------------------------------------
+    // Save everything in same transaction
+    // --------------------------------------------------
+
+    await Promise.all([
+      leaveRequest.save({
+        session,
+      }),
+
+      leaveBalance.save({
+        session,
+      }),
+
+      addUserHistory(
+        {
+          userId: leaveRequest.userId.toString(),
+          field: "leaveApplicationStatus",
+          fieldValue: status,
+          remarks,
+          assignedBy: req.user!.id,
+        },
+        session,
+      ),
+    ]);
+
+    await session.commitTransaction();
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(null, `Leave ${status.toLowerCase()} successfully`),
+      );
   } catch (error) {
     await session.abortTransaction();
+
     next(error);
   } finally {
     session.endSession();
