@@ -56,7 +56,7 @@ export const createDailyAttendance = async () => {
 
     const today = new Date();
 
-    const attendanceDate = normalizeDate(today)
+    const attendanceDate = normalizeDate(today);
 
     const users = await UserModel.find({
       status: userStatus.ACTIVE,
