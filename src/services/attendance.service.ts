@@ -81,7 +81,8 @@ export const createDailyAttendance = async () => {
       // Leave
       //---------------------------------------
       let leaveRequestId = null;
-      const leave = await LeaveRequestModel.exists({
+      let isHalfDay = null;
+      const leave = await LeaveRequestModel.findOne({
         userId: user._id,
         status: leaveStatusType.APPROVED,
         startDate: {
@@ -95,6 +96,13 @@ export const createDailyAttendance = async () => {
       if (leave) {
         attendanceStatus = attendanceType.LEAVE;
         leaveRequestId = leave._id;
+        if (
+          leave.duration === "FIRST_HALF" ||
+          leave.duration === "SECOND_HALF"
+        ) {
+          attendanceStatus = attendanceType.ABSENT;
+          isHalfDay = true;
+        }
       }
 
       //---------------------------------------
@@ -201,7 +209,8 @@ export const createUserDaySpecificAttendance = async (
     // Leave
     //---------------------------------------
     let leaveRequestId = null;
-    const leave = await LeaveRequestModel.exists({
+    let isHalfDay = false;
+    const leave = await LeaveRequestModel.findOne({
       userId: user._id,
       status: leaveStatusType.APPROVED,
       startDate: {
@@ -215,6 +224,9 @@ export const createUserDaySpecificAttendance = async (
     if (leave) {
       attendanceStatus = attendanceType.LEAVE;
       leaveRequestId = leave._id;
+      if (leave.duration === "FIRST_HALF" || leave.duration === "SECOND_HALF") {
+        isHalfDay = true;
+      }
     }
 
     //---------------------------------------
