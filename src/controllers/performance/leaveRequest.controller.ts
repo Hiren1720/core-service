@@ -26,11 +26,11 @@ export const applyLeave = async (
   try {
     session.startTransaction();
 
-    const userId = req.user!.id;
     const companyId = req.user!.companyId as string;
 
     const {
       leaveId,
+      userId,
       startDate,
       endDate,
       duration = "FULL_DAY",

@@ -323,7 +323,7 @@ export const getAttendanceByMonth = async (
           },
         ])
         .select(
-          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes earlyExitMinutes leaveRequestId",
+          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes isLate earlyExitMinutes leaveRequestId",
         )
         .sort({ attendanceDate: 1 })
         .lean(),

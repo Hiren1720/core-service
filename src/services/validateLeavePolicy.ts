@@ -15,13 +15,11 @@ export const validateLeavePolicy = async ({
   leaveId,
   startDate,
 }: ValidateLeaveProps) => {
-  console.log("userId", userId)
   const userPolicy = await UserPolicyModel.findOne({
     userId,
   })
     .sort({ createdAt: -1 })
     .populate("policyId");
-  console.log("userPolicy", userPolicy)
 
   if (!userPolicy) {
     throw new Error("Policy not assigned");
