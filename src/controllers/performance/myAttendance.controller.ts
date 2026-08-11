@@ -335,7 +335,7 @@ export const getAttendanceByMonth = async (
     return res.status(200).json(
       ApiResponse.success(
         {
-          list: [...generatedDays],
+          list: [...attendanceRecords,...generatedDays],
         },
         "Attendance fetched successfully",
       ),
