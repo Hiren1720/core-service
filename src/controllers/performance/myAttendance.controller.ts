@@ -9,6 +9,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { attendanceType } from "../../types/types";
 import { createUserDaySpecificAttendance } from "../../services/attendance.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { AttendancePayrollResult, PayrollDeduction, PayrollEarning, PayrollTotals } from "../../types/payroll.types";
 
 const statusPriority: Record<string, number> = {
   PRESENT: 1,
@@ -335,7 +336,7 @@ export const getAttendanceByMonth = async (
     return res.status(200).json(
       ApiResponse.success(
         {
-          list: [...attendanceRecords,...generatedDays],
+          list: [...generatedDays],
         },
         "Attendance fetched successfully",
       ),

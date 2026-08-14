@@ -30,6 +30,14 @@ export const createShift = async (
       branchIds,
     });
 
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "shiftStatus",
+      fieldId: shift._id.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
     return res
       .status(201)
       .json(ApiResponse.success(shift, "Shift created successfully"));
@@ -206,6 +214,7 @@ export const updateShiftStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "shiftStatus",
+      fieldId: shift._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

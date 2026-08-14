@@ -288,6 +288,7 @@ export const updateReimbursementStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "reimbursementStatus",
+      fieldId: reimbursement._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

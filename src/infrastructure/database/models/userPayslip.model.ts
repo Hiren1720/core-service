@@ -15,7 +15,7 @@ const UserPayslipSchema = new Schema(
 
     payslipId: {
       type: Schema.Types.ObjectId,
-      ref: "Policy",
+      ref: "Payslip",
       required: true,
     },
 

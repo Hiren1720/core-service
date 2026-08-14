@@ -1,0 +1,738 @@
+import mongoose, { Types } from "mongoose";
+import {
+  AttendancePayrollResult,
+  PayrollDeduction,
+  PayrollEarning,
+  PayrollTotals,
+  ReimbursementResult,
+} from "../types/payroll.types";
+import { attendanceType, expenseStatus } from "../types/types";
+import {
+  AttendanceModel,
+  PayrollModel,
+  ReimbursementModel,
+  UserModel,
+  UserPayslipModel,
+  UserPolicyModel,
+} from "../infrastructure/database/models";
+
+export const generateEmployeePayroll = async (
+  userId: string,
+  payrollMonth: number,
+  payrollYear: number,
+) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    // ---------------------------------------------
+    // 1. Payroll period
+    // ---------------------------------------------
+
+    const { periodStart, periodEnd } = getPayrollPeriod(
+      payrollMonth,
+      payrollYear,
+    );
+
+    // ---------------------------------------------
+    // 2. Employee
+    // ---------------------------------------------
+
+    const employee = await UserModel.findById(userId)
+      .select("companyId")
+      .lean();
+
+    if (!employee) {
+      throw new Error("Employee not found");
+    }
+
+    // ---------------------------------------------
+    // 3. Salary
+    // ---------------------------------------------
+
+    const payslip: any = await UserPayslipModel.findOne({ userId })
+      .populate("payslipId")
+      .sort({ createdAt: -1 });
+    if (!payslip) {
+      throw new Error("Payslip not found");
+    }
+    // ---------------------------------------------
+    // 4. Policy
+    // ---------------------------------------------
+
+    const policy: any = await UserPolicyModel.findOne({ userId }).populate(
+      "policyId",
+    );
+    if (!policy?.policyId) {
+      throw new Error("Employee policy not found");
+    }
+
+    // ---------------------------------------------
+    // 5. Attendance
+    // ---------------------------------------------
+    const attendance = await getMonthlyAttendance(
+      userId,
+      periodStart,
+      periodEnd,
+    );
+
+    // ---------------------------------------------
+    // 7. Reimbursements
+    // ---------------------------------------------
+
+    const reimbursements = await getApprovedReimbursements(
+      userId,
+      periodStart,
+      periodEnd,
+    );
+
+    // ---------------------------------------------
+    // 8. Attendance payroll calculation
+    // ---------------------------------------------
+
+    const attendanceResult = calculateAttendancePayroll({
+      attendance,
+      policy: policy.policyId,
+    });
+
+    // ---------------------------------------------
+    // 9. Salary breakdown
+    // ---------------------------------------------
+
+    const salaryBreakdown = calculateSalaryBreakdown(
+      payslip.salary,
+      payslip?.payslipId?.details as PayslipDetail[],
+    );
+
+    // ---------------------------------------------
+    // 10. Reimbursements
+    // ---------------------------------------------
+
+    const reimbursementResult = calculateReimbursements(reimbursements);
+
+    // ---------------------------------------------
+    // 11. Earnings
+    // ---------------------------------------------
+
+    const earnings = buildPayrollEarnings({
+      salaryBreakdown,
+      attendanceResult,
+      reimbursementResult,
+    });
+
+    // ---------------------------------------------
+    // 12. Deductions
+    // ---------------------------------------------
+
+    const deductions = buildPayrollDeductions({
+      salary: payslip.salary,
+      attendanceResult,
+    });
+
+    // ---------------------------------------------
+    // 13. Final totals
+    // ---------------------------------------------
+
+    const totals = calculatePayrollTotals({
+      earnings,
+      deductions,
+      reimbursements: reimbursementResult,
+    });
+
+    // ---------------------------------------------
+    // 14. Save payroll snapshot
+    // ---------------------------------------------
+
+    const payroll = await PayrollModel.create(
+      [
+        {
+          companyId: employee.companyId,
+          userId,
+
+          payrollMonth,
+          payrollYear,
+
+          periodStart,
+          periodEnd,
+
+          //   employeeSnapshot: buildEmployeeSnapshot(employee),
+          //   salarySnapshot: buildSalarySnapshot(salary),
+
+          attendance: attendanceResult.summary,
+          earnings,
+          deductions,
+          reimbursements: reimbursementResult.details,
+
+          //   leaveDetails: leaves,
+          //   policySnapshot: buildPolicySnapshot(policy),
+
+          totals,
+          status: "PROCESSED",
+          generatedAt: new Date(),
+          generatedBy: new Types.ObjectId(userId),
+        },
+      ],
+      {
+        session,
+      },
+    );
+
+    await session.commitTransaction();
+
+    return payroll[0];
+  } catch (error) {
+    await session.abortTransaction();
+
+    console.error("Error while generating employee payroll", error);
+
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+export const getPayrollPeriod = (month: number, year: number) => {
+  const periodStart = new Date(year, month - 1, 1);
+  const periodEnd = new Date(year, month, 0);
+
+  periodStart.setHours(0, 0, 0, 0);
+  periodEnd.setHours(23, 59, 59, 999);
+
+  return {
+    periodStart,
+    periodEnd,
+  };
+};
+
+interface PayslipDetail {
+  _id?: Types.ObjectId;
+  name: string;
+  value: number | null;
+  valueType: "PERCENTAGE" | "FIXED";
+}
+
+interface SalaryComponent {
+  name: string;
+  amount: number;
+  value: number | null;
+  valueType: string;
+  sourceId?: Types.ObjectId;
+}
+
+interface SalaryBreakdown {
+  grossSalary: number;
+  components: SalaryComponent[];
+}
+
+export const calculateSalaryBreakdown = (
+  salary: number,
+  details: PayslipDetail[],
+): SalaryBreakdown => {
+  let totalDefinedAmount = 0;
+
+  const components: SalaryComponent[] = [];
+
+  for (const detail of details) {
+    if (detail.value === null || detail.value === undefined) {
+      continue;
+    }
+
+    const amount =
+      detail.valueType === "PERCENTAGE"
+        ? (salary * detail.value) / 100
+        : detail.value;
+
+    totalDefinedAmount += amount;
+
+    components.push({
+      name: detail.name,
+      amount,
+      value: detail.value,
+      valueType: detail.valueType,
+      sourceId: detail._id,
+    });
+  }
+
+  if (totalDefinedAmount > salary) {
+    throw new Error("Payslip components cannot exceed total salary");
+  }
+
+  const remainingAmount = salary - totalDefinedAmount;
+
+  if (remainingAmount > 0) {
+    components.push({
+      name: "Other",
+      amount: remainingAmount,
+      value: null,
+      valueType: "FIXED",
+    });
+  }
+
+  return {
+    grossSalary: salary,
+    components,
+  };
+};
+
+const calculateAttendancePayroll = ({
+  attendance,
+  policy,
+}: {
+  attendance: any[];
+  policy: any;
+}): AttendancePayrollResult => {
+  let totalWorkingDays = 0;
+
+  let presentDays = 0;
+  let absentDays = 0;
+  let halfDays = 0;
+
+  let weeklyOffDays = 0;
+  let holidays = 0;
+  let paidLeaveDays = 0;
+
+  let lateMinutes = 0;
+  let earlyExitMinutes = 0;
+  let overtimeMinutes = 0;
+
+  let lateCount = 0;
+
+  // --------------------------------------------------
+  // Attendance calculation
+  // --------------------------------------------------
+
+  for (const record of attendance) {
+    const status = record.attendanceStatus;
+
+    // -----------------------------------------------
+    // Weekly off / holiday
+    // -----------------------------------------------
+
+    if (status === attendanceType.WEEK_OFF) {
+      weeklyOffDays += 1;
+      continue;
+    }
+    if (status === attendanceType.HOLIDAY) {
+      holidays += 1;
+      continue;
+    }
+
+    totalWorkingDays += 1;
+
+    // -----------------------------------------------
+    // Half day
+    // -----------------------------------------------
+
+    if (record.isHalfDay) {
+      halfDays += 1;
+
+      // ---------------------------------------------
+      // Half day WITHOUT leave
+      //
+      // Employee worked only half day.
+      //
+      // PRESENT -> 0.5 present + 0.5 absent
+      // ABSENT  -> 1 absent
+      // ---------------------------------------------
+
+      if (!record.leaveRequestId) {
+        if (status === attendanceType.PRESENT) {
+          presentDays += 0.5;
+          absentDays += 0.5;
+        } else if (status === attendanceType.ABSENT) {
+          absentDays += 1;
+        }
+      }
+
+      // ---------------------------------------------
+      // Half day WITH leave
+      //
+      // PRESENT -> 0.5 leave + 0.5 present
+      // ABSENT  -> 0.5 leave + 0.5 absent
+      // ---------------------------------------------
+      else {
+        paidLeaveDays += 0.5;
+
+        if (status === attendanceType.PRESENT) {
+          presentDays += 0.5;
+        } else if (status === attendanceType.ABSENT) {
+          absentDays += 0.5;
+        }
+      }
+
+      // ---------------------------------------------
+      // Attendance metrics
+      // ---------------------------------------------
+
+      lateMinutes += record.lateMinutes || 0;
+      earlyExitMinutes += record.earlyExitMinutes || 0;
+      overtimeMinutes += record.overtimeMinutes || 0;
+
+      if (record.isLate) {
+        lateCount += 1;
+      }
+
+      continue;
+    }
+
+    // -----------------------------------------------
+    // Full day leave
+    // -----------------------------------------------
+
+    if (status === attendanceType.LEAVE) {
+      if (record.leaveRequestId) {
+        paidLeaveDays += 1;
+      } else {
+        absentDays += 1;
+      }
+
+      continue;
+    }
+
+    // -----------------------------------------------
+    // Normal full-day attendance
+    // -----------------------------------------------
+
+    switch (status) {
+      case attendanceType.PRESENT:
+        presentDays += 1;
+        break;
+
+      case attendanceType.ABSENT:
+        absentDays += 1;
+        break;
+    }
+
+    // -----------------------------------------------
+    // Late / early / overtime
+    // -----------------------------------------------
+
+    lateMinutes += record.lateMinutes || 0;
+    earlyExitMinutes += record.earlyExitMinutes || 0;
+    overtimeMinutes += record.overtimeMinutes || 0;
+
+    if (record.isLate) {
+      lateCount += 1;
+    }
+  }
+
+  // --------------------------------------------------
+  // Late salary deduction
+  // --------------------------------------------------
+
+  let lateSalaryCutDays = 0;
+
+  const lateRule = policy?.lateRule;
+
+  if (lateRule) {
+    const allowedLateCount = lateRule.allowedLateCount || 0;
+    const salaryCutDays = lateRule.onAbsentSlarayDaysCut || 0;
+
+    if (allowedLateCount > 0 && lateCount > allowedLateCount) {
+      lateSalaryCutDays =
+        Math.floor((lateCount - 1) / allowedLateCount) * salaryCutDays;
+    }
+  }
+
+  return {
+    summary: {
+      totalWorkingDays,
+      presentDays,
+      absentDays,
+      halfDays,
+      weeklyOffDays,
+      paidLeaveDays,
+      lateMinutes,
+      earlyExitMinutes,
+      overtimeMinutes,
+      lateCount,
+    },
+
+    deductions: {
+      absentDays,
+      lateSalaryCutDays,
+      halfDaySalaryDays: 0,
+    },
+
+    earnings: {
+      overtimeMinutes,
+      overtimeAmount: 0,
+    },
+  };
+};
+
+export const buildPayrollEarnings = ({
+  salaryBreakdown,
+  attendanceResult,
+  reimbursementResult,
+}: {
+  salaryBreakdown: SalaryBreakdown;
+  attendanceResult: AttendancePayrollResult;
+  reimbursementResult: ReimbursementResult;
+}): PayrollEarning[] => {
+  const earnings: PayrollEarning[] = [];
+
+  // ---------------------------------------------
+  // Salary components
+  // ---------------------------------------------
+
+  for (const component of salaryBreakdown.components) {
+    earnings.push({
+      type: component.name,
+      name: component.name,
+      amount: component.amount,
+      calculation:
+        component.valueType === "PERCENTAGE"
+          ? `${component.value}%`
+          : "Fixed amount",
+      source: "SALARY",
+      sourceId: component.sourceId,
+      metadata: {
+        value: component.value,
+        valueType: component.valueType,
+      },
+    });
+  }
+
+  // ---------------------------------------------
+  // Overtime
+  // ---------------------------------------------
+
+  if (attendanceResult.earnings.overtimeAmount > 0) {
+    earnings.push({
+      type: "OVERTIME",
+      name: "Overtime",
+      amount: attendanceResult.earnings.overtimeAmount,
+      calculation: `${attendanceResult.earnings.overtimeMinutes} minutes`,
+      source: "ATTENDANCE",
+      metadata: {
+        overtimeMinutes: attendanceResult.earnings.overtimeMinutes,
+      },
+    });
+  }
+
+  // ---------------------------------------------
+  // Reimbursements
+  // ---------------------------------------------
+
+  if (reimbursementResult.totalAmount > 0) {
+    for (const reimbursement of reimbursementResult.details) {
+      earnings.push({
+        type: "REIMBURSEMENT",
+        name: reimbursement.name,
+        amount: reimbursement.amount,
+        calculation: "Approved reimbursement",
+        source: "REIMBURSEMENT",
+        sourceId: reimbursement.reimbursementId,
+        metadata: {
+          date: reimbursement.date,
+          description: reimbursement.description,
+        },
+      });
+    }
+  }
+
+  return earnings;
+};
+
+export const buildPayrollDeductions = ({
+  salary,
+  attendanceResult,
+}: {
+  salary: number;
+  attendanceResult: AttendancePayrollResult;
+}): PayrollDeduction[] => {
+  const deductions: PayrollDeduction[] = [];
+
+  const { summary, deductions: attendanceDeductions } = attendanceResult;
+
+  // --------------------------------------------------
+  // Daily salary
+  //
+  // Example:
+  // Salary = 30,000
+  // Working days = 26
+  //
+  // Daily salary = 30,000 / 26
+  // --------------------------------------------------
+
+  if (summary.totalWorkingDays <= 0) {
+    return deductions;
+  }
+
+  const dailySalary = salary / summary.totalWorkingDays;
+
+  // --------------------------------------------------
+  // 1. Absent deduction
+  // --------------------------------------------------
+
+  if (attendanceDeductions.absentDays > 0) {
+    const amount = dailySalary * attendanceDeductions.absentDays;
+
+    deductions.push({
+      type: "ABSENT",
+      name: "Absent Deduction",
+      amount: Number(amount.toFixed(2)),
+      calculation: `${attendanceDeductions.absentDays} day(s) × ${dailySalary.toFixed(2)}`,
+      source: "ATTENDANCE",
+      metadata: {
+        days: attendanceDeductions.absentDays,
+        dailySalary,
+      },
+    });
+  }
+
+  // --------------------------------------------------
+  // 2. Late mark salary deduction
+  // --------------------------------------------------
+
+  if (attendanceDeductions.lateSalaryCutDays > 0) {
+    const amount = dailySalary * attendanceDeductions.lateSalaryCutDays;
+
+    deductions.push({
+      type: "LATE",
+      name: "Late Mark Deduction",
+      amount: Number(amount.toFixed(2)),
+      calculation: `${attendanceDeductions.lateSalaryCutDays} day(s) × ${dailySalary.toFixed(2)}`,
+      source: "POLICY",
+      metadata: {
+        lateCount: summary.lateCount,
+        salaryCutDays: attendanceDeductions.lateSalaryCutDays,
+        dailySalary,
+      },
+    });
+  }
+
+  // --------------------------------------------------
+  // 4. Half-day deduction
+  //
+  // Important:
+  //
+  // We DON'T directly deduct `halfDays`.
+  //
+  // Our attendance calculation already converts:
+  //
+  // Half day worked without leave
+  //     -> 0.5 PRESENT + 0.5 ABSENT
+  //
+  // Therefore the 0.5 is already included in
+  // absentDays.
+  //
+  // This prevents double deduction.
+  // --------------------------------------------------
+
+  return deductions;
+};
+
+export const calculatePayrollTotals = ({
+  earnings,
+  deductions,
+  reimbursements,
+}: {
+  earnings: PayrollEarning[];
+  deductions: PayrollDeduction[];
+  reimbursements: any;
+}): PayrollTotals => {
+  // Salary + overtime + other earnings
+  const totalEarnings = earnings.reduce(
+    (total, earning) => total + (earning.amount || 0),
+    0,
+  );
+
+  // Approved reimbursement amount
+  const totalReimbursements =
+    reimbursements?.details?.reduce(
+      (total: number, reimbursement: any) =>
+        total + (reimbursement.approvedAmount || 0),
+      0,
+    ) || 0;
+
+  // All salary/payroll deductions
+  const totalDeductions = deductions.reduce(
+    (total, deduction) => total + (deduction.amount || 0),
+    0,
+  );
+
+  // Gross salary earnings before deductions
+  const grossPay = totalEarnings;
+
+  // Final amount employee receives
+  const netPay = grossPay + totalReimbursements - totalDeductions;
+
+  return {
+    totalEarnings: Number(totalEarnings.toFixed(2)),
+    totalReimbursements: Number(totalReimbursements.toFixed(2)),
+    totalDeductions: Number(totalDeductions.toFixed(2)),
+    grossPay: Number(grossPay.toFixed(2)),
+    netPay: Number(netPay.toFixed(2)),
+  };
+};
+
+const getApprovedReimbursements = async (
+  userId: string,
+  periodStart: Date,
+  periodEnd: Date,
+) => {
+  return ReimbursementModel.find({
+    userId,
+    status: expenseStatus.APPROVED,
+    date: {
+      $gte: periodStart,
+      $lte: periodEnd,
+    },
+  })
+    .select("_id name date description amount status")
+    .lean();
+};
+
+const getMonthlyAttendance = async (
+  userId: string,
+  periodStart: Date,
+  periodEnd: Date,
+) => {
+  return AttendanceModel.find({
+    userId,
+    attendanceDate: {
+      $gte: periodStart,
+      $lte: periodEnd,
+    },
+  }).lean();
+};
+
+export const calculateReimbursements = (
+  reimbursements: any[],
+): ReimbursementResult => {
+  let totalAmount = 0;
+
+  const details = [];
+
+  for (const reimbursement of reimbursements) {
+    // Only approved reimbursements should enter payroll.
+    if (reimbursement.status !== expenseStatus.APPROVED) {
+      continue;
+    }
+
+    const amount = reimbursement.amount || 0;
+
+    if (amount <= 0) {
+      continue;
+    }
+
+    totalAmount += amount;
+
+    details.push({
+      reimbursementId: reimbursement._id,
+      name: reimbursement.name,
+      description: reimbursement.description || "",
+      date: reimbursement.date,
+      amount,
+      status: reimbursement.status,
+    });
+  }
+
+  return {
+    totalAmount: Number(totalAmount.toFixed(2)),
+    details,
+  };
+};

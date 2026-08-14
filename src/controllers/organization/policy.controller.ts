@@ -22,7 +22,6 @@ export const createPolicy = async (req: Request, res: Response) => {
       companyId,
       name: name.trim(),
     });
-    console.log("policyExists", policyExists);
 
     if (policyExists) {
       await session.abortTransaction();
@@ -59,6 +58,15 @@ export const createPolicy = async (req: Request, res: Response) => {
       ],
       { session },
     );
+
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "policyStatus",
+      fieldId: policy?.[0]?._id?.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
 
     await session.commitTransaction();
 
@@ -321,6 +329,7 @@ export const updatePolicyStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "policyStatus",
+      fieldId: policy._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

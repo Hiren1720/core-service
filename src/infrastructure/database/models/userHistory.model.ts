@@ -6,7 +6,6 @@ const UserHistorySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     field: {
       type: String, // role, employmentType, probationPeriod
@@ -15,7 +14,11 @@ const UserHistorySchema = new Schema(
 
     fieldValue: {
       type: Schema.Types.Mixed,
-      default: ""
+      default: "",
+    },
+    fieldId: {
+      type: String,
+      required: false,
     },
 
     remarks: {
@@ -36,5 +39,6 @@ const UserHistorySchema = new Schema(
 );
 
 UserHistorySchema.index({ createdAt: -1 });
+UserHistorySchema.index({ field: 1, fieldId: 1 });
 
 export const UserHistoryModel = model("UserHistory", UserHistorySchema);

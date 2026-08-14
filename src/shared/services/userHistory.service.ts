@@ -5,6 +5,7 @@ export const addUserHistory = async (
   data: {
     userId: string;
     field: string;
+    fieldId: string;
     fieldValue: any;
     remarks: string;
     assignedBy: string;
@@ -12,13 +13,14 @@ export const addUserHistory = async (
   session?: ClientSession,
 ) => {
   try {
-    const { userId, field, fieldValue, remarks, assignedBy } = data;
-    
+    const { userId, field, fieldId, fieldValue, remarks, assignedBy } = data;
+
     await UserHistoryModel.create(
       [
         {
           userId,
           field,
+          fieldId,
           fieldValue,
           remarks,
           assignedBy,

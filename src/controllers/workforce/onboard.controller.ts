@@ -557,6 +557,7 @@ export const assignRolesResponsibility = async (
           {
             userId,
             field: "employmentType",
+            fieldId: userId,
             fieldValue: employmentType,
             remarks,
             assignedBy,
@@ -576,6 +577,7 @@ export const assignRolesResponsibility = async (
             userId,
             field: "probationPeriod",
             fieldValue: probationPeriod,
+            fieldId: userId,
             remarks,
             assignedBy,
           },
@@ -587,7 +589,7 @@ export const assignRolesResponsibility = async (
       user.role = role;
       operations.push(
         addUserHistory(
-          { userId, field: "role", fieldValue: role, remarks, assignedBy },
+          { userId, field: "role",fieldId: userId, fieldValue: role, remarks, assignedBy },
           session,
         ),
       );
@@ -856,6 +858,7 @@ export const updateUserStatus = async (
     await addUserHistory({
       userId: req.params.userId as string,
       field: "userStatus",
+      fieldId: user._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

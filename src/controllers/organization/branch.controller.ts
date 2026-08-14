@@ -42,6 +42,15 @@ export const createBranch = async (
       branchType,
     });
 
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "branchStatus",
+      fieldId: branch._id.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
+
     return res
       .status(201)
       .json(ApiResponse.success(branch, "Branch created successfully"));
@@ -222,6 +231,7 @@ export const updateBranchStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "branchStatus",
+      fieldId: branch._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

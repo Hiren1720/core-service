@@ -32,6 +32,7 @@ export const createTermination = async (
       field: "terminationStatus",
       fieldValue: terminationStatus.TERMINATE,
       remarks: "",
+      fieldId: termination._id.toString(),
       assignedBy,
     });
 
@@ -238,6 +239,7 @@ export const updateTerminationStatus = async (
       userId: req.user!.id as string,
       field: "terminationStatus",
       fieldValue: status,
+      fieldId: termination._id.toString(),
       remarks,
       assignedBy,
     });
@@ -307,6 +309,7 @@ export const sendTerminationMail = async (
       userId: req.user!.id as string,
       field: "terminationMail",
       fieldValue: lastWorkingDay,
+      fieldId: termination._id.toString(),
       remarks: "",
       assignedBy: senderId,
     });

@@ -10,6 +10,7 @@ import WorkforceRoutes from "./workforce";
 import ExpenseRoutes from "./expense";
 import PayslipRoutes from "./payslip";
 import PerformanceRoutes from "./performance";
+import HistoryRoutes from "./history/history.routes.js";
 
 import DashboardRoutes from "./dashboard/dashboard.routes.js";
 
@@ -36,5 +37,7 @@ router.use("/expense", ExpenseRoutes);
 router.use("/payslip", PayslipRoutes);
 
 router.use("/performance", PerformanceRoutes);
+
+router.use("/history", HistoryRoutes);
 
 export default router;

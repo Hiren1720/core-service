@@ -29,6 +29,7 @@ export const createResignation = async (
     await addUserHistory({
       userId: userId,
       field: "resignationStatus",
+      fieldId: resignation._id.toString(),
       fieldValue: resignationStatus.PENDING,
       remarks: "",
       assignedBy,
@@ -232,6 +233,7 @@ export const updateResignationStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "resignationStatus",
+      fieldId: resignation._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,
@@ -300,6 +302,7 @@ export const sendResignationAcceptedMail = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "resignationMail",
+      fieldId: resignation._id.toString(),
       fieldValue: lastWorkingDay,
       remarks: "",
       assignedBy: senderId,

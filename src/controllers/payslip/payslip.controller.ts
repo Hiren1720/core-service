@@ -194,6 +194,7 @@ export const updatePayslipStatus = async (
       userId: req.user!.id as string,
       field: "payslipStatus",
       fieldValue: status,
+      fieldId: payslip._id.toString(),
       remarks,
       assignedBy,
     });

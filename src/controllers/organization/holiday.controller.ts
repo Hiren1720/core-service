@@ -22,6 +22,15 @@ export const createHoliday = async (
       effectiveYear,
     });
 
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "holidayStatus",
+      fieldId: holiday._id.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
+
     return res
       .status(201)
       .json(ApiResponse.success(holiday, "Holiday created successfully"));
@@ -217,6 +226,7 @@ export const updateHolidayStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "holidayStatus",
+      fieldId: holiday._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

@@ -31,6 +31,7 @@ export const createPromotion = async (
     await addUserHistory({
       userId: userId,
       field: "promotionStatus",
+      fieldId: promotion._id.toString(),
       fieldValue: promotionStatus.HOLD,
       remarks: "",
       assignedBy,
@@ -256,6 +257,7 @@ export const updatePromotionStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "promotionStatus",
+      fieldId: promotion._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,
@@ -326,6 +328,7 @@ export const sendPromotionMail = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "promotionMail",
+      fieldId: promotion._id.toString(),
       fieldValue: effectiveFrom,
       remarks: "",
       assignedBy: senderId,

@@ -298,6 +298,7 @@ export const updateOfficeExpenseStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "officeExpenseStatus",
+      fieldId: officeExpense._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

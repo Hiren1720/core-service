@@ -34,6 +34,15 @@ export const createDepartment = async (
       assignments,
     });
 
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "departmentStatus",
+      fieldId: department._id.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
+
     return res
       .status(201)
       .json(ApiResponse.success(department, "Department created successfully"));
@@ -196,6 +205,7 @@ export const updateDepartmentStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "departmentStatus",
+      fieldId: department._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,

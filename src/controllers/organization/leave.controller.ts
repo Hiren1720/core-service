@@ -19,6 +19,15 @@ export const createLeave = async (
       isPaid,
     });
 
+    await addUserHistory({
+      userId: req.user!.id as string,
+      field: "leaveStatus",
+      fieldId: leave._id.toString(),
+      fieldValue: status.ACTIVE,
+      remarks: "",
+      assignedBy: req.user!.id as string,
+    });
+
     return res
       .status(201)
       .json(ApiResponse.success(leave, "Leave created successfully"));
@@ -197,6 +206,7 @@ export const updateLeaveStatus = async (
     await addUserHistory({
       userId: req.user!.id as string,
       field: "leaveStatus",
+      fieldId: leave._id.toString(),
       fieldValue: status,
       remarks,
       assignedBy,
