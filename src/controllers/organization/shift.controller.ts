@@ -193,7 +193,7 @@ export const updateShiftStatus = async (
       return res.status(404).json(ApiResponse.error("Shift not found"));
     }
 
-    if (shift.status !== "ACTIVE") {
+    if (status !== "ACTIVE") {
       const userCount = await UserModel.countDocuments({
         shiftId: shift._id,
         companyId: req.user!.companyId,
