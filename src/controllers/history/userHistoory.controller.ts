@@ -15,6 +15,7 @@ export const getUserHistoryByType = async (
       fieldId,
     };
     const data = await UserHistoryModel.find(query)
+      .populate("assignedBy", "firstName lastName profileImage")
       .sort({ createdAt: -1 })
       .lean();
 
