@@ -3,6 +3,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { PayslipModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createPayslip = async (
   req: Request,
@@ -33,14 +34,13 @@ export const getPayslips = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -58,17 +58,55 @@ export const getPayslips = async (
       filter.status = status;
     }
 
-    const [payslips, total] = await Promise.all([
-      PayslipModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const payslipsQuery = PayslipModel.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      payslipsQuery.skip(skip).limit(limit);
+    }
+
+    const [payslips, total] = await Promise.all([
+      payslipsQuery,
       PayslipModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      // Get all unique component names
+      const detailNames = [
+        ...new Set(
+          payslips.flatMap((payslip: any) =>
+            payslip.details.map((detail: any) => detail.name),
+          ),
+        ),
+      ];
+
+      const data = payslips.map((payslip: any) => {
+        const row: Record<string, any> = {
+          Name: payslip.name,
+          Status: payslip.status,
+        };
+
+        // Initialize every component column
+        for (const detailName of detailNames) {
+          row[detailName] = "";
+        }
+
+        // Fill component values
+        for (const detail of payslip.details) {
+          row[detail.name] =
+            detail.value !== null && detail.value !== undefined
+              ? `${detail.value}${detail.valueType === "PERCENTAGE" ? "%" : ""}`
+              : "";
+        }
+
+        return row;
+      });
+
+      return downloadCsv(res, data, "payslips");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

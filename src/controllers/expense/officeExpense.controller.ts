@@ -5,6 +5,7 @@ import { saveFile } from "../../shared/services/file.service";
 import { OfficeExpenseModel } from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { expenseStatus } from "../../types/types";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createOfficeExpense = async (
   req: Request,
@@ -104,14 +105,13 @@ export const getOfficeExpenses = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -138,19 +138,36 @@ export const getOfficeExpenses = async (
       filter.status = status;
     }
 
-    const [officeExpenses, total] = await Promise.all([
-      OfficeExpenseModel.find(filter)
-        .populate("assignedBy", "firstName lastName profileImage role")
-        .populate("branchId", "name")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const officeExpensesQuery = OfficeExpenseModel.find(filter)
+      .populate("assignedBy", "firstName lastName profileImage role")
+      .populate("branchId", "name")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      officeExpensesQuery.skip(skip).limit(limit);
+    }
+
+    const [officeExpenses, total] = await Promise.all([
+      officeExpensesQuery,
       OfficeExpenseModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = officeExpenses.map((officeExpense: any) => ({
+        Name: officeExpense.name,
+        ExpenseDate: officeExpense.date.toLocaleDateString(),
+        Description: officeExpense.description,
+        Status: officeExpense.status,
+        Amount: officeExpense.amount,
+        TransactionId: officeExpense.transactionId,
+        PaymentMode: officeExpense.paymentMode,
+      }));
+
+      return downloadCsv(res, data, "officeExpenses");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

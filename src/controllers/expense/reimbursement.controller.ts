@@ -5,6 +5,7 @@ import { saveFile } from "../../shared/services/file.service";
 import { ReimbursementModel } from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { expenseStatus } from "../../types/types";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createReimbursement = async (
   req: Request,
@@ -95,14 +96,13 @@ export const getReimbursements = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -129,18 +129,34 @@ export const getReimbursements = async (
       filter.status = status;
     }
 
-    const [reimbursements, total] = await Promise.all([
-      ReimbursementModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const reimbursementsQuery = ReimbursementModel.find(filter)
+      .populate("userId", "firstName lastName profileImage role")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      reimbursementsQuery.skip(skip).limit(limit);
+    }
+
+    const [reimbursements, total] = await Promise.all([
+      reimbursementsQuery,
       ReimbursementModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = reimbursements.map((reimbursement: any) => ({
+        Name: reimbursement.name,
+        UserName: reimbursement.userId.firstName,
+        ExpenseDate: reimbursement.date.toLocaleDateString(),
+        Description: reimbursement.description,
+        Status: reimbursement.status,
+        Amount: reimbursement.amount,
+      }));
+
+      return downloadCsv(res, data, "reimbursements");
+    }
 
     return res.status(200).json(
       ApiResponse.success(
