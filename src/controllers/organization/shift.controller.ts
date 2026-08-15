@@ -3,6 +3,7 @@ import { ShiftModel, UserModel } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { status } from "../../types/types";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createShift = async (
   req: Request,
@@ -53,14 +54,13 @@ export const getShifts = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -79,6 +79,17 @@ export const getShifts = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
+    const shifyQuery = ShiftModel.find(filter)
+      .populate("branchIds", "name")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
+
+    if (!isDownload) {
+      shifyQuery.skip(skip).limit(limit);
+    }
+
     const [shifts, total] = await Promise.all([
       ShiftModel.find(filter)
         .populate("branchIds", "name")
@@ -91,6 +102,20 @@ export const getShifts = async (
 
       ShiftModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = shifts.map((shift) => ({
+        Name: shift.name,
+        StartTime: shift.startTime,
+        EndTime: shift.endTime,
+        BreakStartTime: shift.breakStartTime,
+        BreakEndTime: shift.breakEndTime,
+        Status: shift.status,
+        Branch: shift.branchIds.map((b: any) => b.name).join(", "),
+      }));
+
+      return downloadCsv(res, data, "shift");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

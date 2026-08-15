@@ -9,6 +9,7 @@ import { terminationStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { terminationTemplate } from "../../shared/templates/termination";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createTermination = async (
   req: Request,
@@ -53,14 +54,13 @@ export const getTerminations = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -78,25 +78,40 @@ export const getTerminations = async (
       filter.status = status;
     }
 
-    const [terminations, total] = await Promise.all([
-      TerminationModel.find(filter)
-        .populate({
-          path: "userId",
-          select: "firstName lastName role profileImage departmentId",
-          populate: {
-            path: "departmentId",
-            select: "name",
-          },
-        })
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const terminationQuery = TerminationModel.find(filter)
+      .populate({
+        path: "userId",
+        select: "firstName lastName role profileImage departmentId",
+        populate: {
+          path: "departmentId",
+          select: "name",
+        },
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      terminationQuery.skip(skip).limit(limit);
+    }
+
+    const [terminations, total] = await Promise.all([
+      terminationQuery,
       TerminationModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = terminations.map((termination: any) => ({
+        Name: termination.userId.firstName + termination.userId.lastName,
+        TerminationType: termination.terminationType,
+        Status: termination.status,
+        Reason: termination.reason,
+        LastWorkingDay: termination.lastWorkingDate.toLocaleDateString(),
+      }));
+
+      return downloadCsv(res, data, "terminations");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

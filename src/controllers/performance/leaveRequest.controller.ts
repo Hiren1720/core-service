@@ -15,6 +15,7 @@ import { leaveStatusType } from "../../types/types";
 import { validateLeaveBalance } from "../../services/leave.service";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const applyLeave = async (
   req: Request,
@@ -345,14 +346,13 @@ export const getLeavesApplications = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {};
 
@@ -367,18 +367,35 @@ export const getLeavesApplications = async (
       filter.status = status;
     }
 
-    const [leaves, total] = await Promise.all([
-      LeaveRequestModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const leaveRequestQuery = LeaveRequestModel.find(filter)
+      .populate("userId", "firstName lastName profileImage role")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      leaveRequestQuery.skip(skip).limit(limit);
+    }
+
+    const [leaves, total] = await Promise.all([
+      leaveRequestQuery,
       LeaveRequestModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = leaves.map((leave: any) => ({
+        Name: leave.userId.firstName + leave.userId.lastName,
+        duration: leave.duration,
+        Status: leave.status,
+        Reason: leave.reason,
+        StartDate: leave.startDate?.toLocaleDateString(),
+        EndDate: leave.endDate?.toLocaleDateString(),
+        ApprovedAt: leave.approvedAt?.toLocaleDateString(),
+      }));
+
+      return downloadCsv(res, data, "leaveApllications");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

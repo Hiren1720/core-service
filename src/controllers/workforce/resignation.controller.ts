@@ -9,6 +9,7 @@ import { resignationStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { resignationAcceptedTemplate } from "../../shared/templates/resignationAccepted";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createResignation = async (
   req: Request,
@@ -52,14 +53,13 @@ export const getResignations = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -76,25 +76,39 @@ export const getResignations = async (
       filter.status = status;
     }
 
-    const [resignations, total] = await Promise.all([
-      ResignationModel.find(filter)
-        .populate({
-          path: "userId",
-          select: "firstName lastName role profileImage departmentId",
-          populate: {
-            path: "departmentId",
-            select: "name",
-          },
-        })
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const resignationQuery = ResignationModel.find(filter)
+      .populate({
+        path: "userId",
+        select: "firstName lastName role profileImage departmentId",
+        populate: {
+          path: "departmentId",
+          select: "name",
+        },
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      resignationQuery.skip(skip).limit(limit);
+    }
+
+    const [resignations, total] = await Promise.all([
+      resignationQuery,
       ResignationModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = resignations.map((resignation: any) => ({
+        Name: resignation.userId.firstName + resignation.userId.lastName,
+        Status: resignation.status,
+        Reason: resignation.reason,
+        LastWorkingDay: resignation.lastWorkingDate.toLocaleDateString(),
+      }));
+
+      return downloadCsv(res, data, "resignations");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

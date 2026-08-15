@@ -3,6 +3,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { LeaveModel } from "../../infrastructure/database/models";
 import { status } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createLeave = async (
   req: Request,
@@ -43,14 +44,13 @@ export const getLeaves = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -69,18 +69,32 @@ export const getLeaves = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
-    const [leaves, total] = await Promise.all([
-      LeaveModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const leaveQuery = LeaveModel.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      leaveQuery.skip(skip).limit(limit);
+    }
+
+    const [leaves, total] = await Promise.all([
+      leaveQuery,
       LeaveModel.countDocuments(filter),
     ]);
 
+    if (isDownload) {
+      const data = leaves.map((leave) => ({
+        Name: leave.name,
+        Address: leave.description,
+        Status: leave.status,
+        Paid: leave.isPaid.toString(),
+      }));
+
+      return downloadCsv(res, data, "leave");
+    }
+    
     return res.status(200).json(
       ApiResponse.success(
         {

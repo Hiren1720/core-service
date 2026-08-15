@@ -7,6 +7,7 @@ import {
 import { status } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createBranch = async (
   req: Request,
@@ -66,14 +67,13 @@ export const getBranches = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -92,18 +92,29 @@ export const getBranches = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
-    const [branches, total] = await Promise.all([
-      BranchModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const branchQuery = BranchModel.find(filter).sort({
+      createdAt: -1,
+    });
 
+    if (!isDownload) {
+      branchQuery.skip(skip).limit(limit);
+    }
+
+    const [branches, total] = await Promise.all([
+      branchQuery.lean(),
       BranchModel.countDocuments(filter),
     ]);
 
+    if (isDownload) {
+      const data = branches.map((branch) => ({
+        Name: branch.name,
+        Address: branch.address,
+        Status: branch.status,
+        BranchType: branch.branchType,
+      }));
+
+      return downloadCsv(res, data, "branch");
+    }
     return res.status(200).json(
       ApiResponse.success(
         {

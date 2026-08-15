@@ -10,6 +10,7 @@ import { promotionStatus } from "../../types/types";
 import { sendMail } from "../../shared/services/mail.service";
 import { promotionTemplate } from "../../shared/templates/promotion";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createPromotion = async (
   req: Request,
@@ -52,14 +53,13 @@ export const getPromotions = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -77,19 +77,33 @@ export const getPromotions = async (
       filter.status = status;
     }
 
-    const [promotions, total] = await Promise.all([
-      PromotionModel.find(filter)
-        .populate("userId", "firstName lastName role profileImage")
-        .populate("designationId", "name")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const promotionQuery = PromotionModel.find(filter)
+      .populate("userId", "firstName lastName role profileImage")
+      .populate("designationId", "name")
+      .sort({
+        createdAt: -1,
+      });
 
+    if (!isDownload) {
+      promotionQuery.skip(skip).limit(limit);
+    }
+
+    const [promotions, total] = await Promise.all([
+      promotionQuery,
       PromotionModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = promotions.map((promotion: any) => ({
+        Name: promotion.userId.firstName + promotion.userId.lastName,
+        Designation: promotion.designationId.name,
+        Status: promotion.status,
+        Reason: promotion.reason,
+        EffectiveDate: promotion.effectiveDate.toLocaleDateString(),
+      }));
+
+      return downloadCsv(res, data, "promotions");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

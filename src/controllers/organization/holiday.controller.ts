@@ -4,6 +4,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createHoliday = async (
   req: Request,
@@ -46,14 +47,13 @@ export const getHolidays = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const effectiveYear =
       req.query.effectiveYear ?? Number(req.query.effectiveYear);
@@ -79,18 +79,35 @@ export const getHolidays = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
-    const [holidays, total] = await Promise.all([
-      HolidayModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const holidayQuery = HolidayModel.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
+    if (!isDownload) {
+      holidayQuery.skip(skip).limit(limit);
+    }
+
+    const [holidays, total] = await Promise.all([
+      holidayQuery,
       HolidayModel.countDocuments(filter),
     ]);
 
+    if (isDownload) {
+      const data = holidays.map((holiday) => ({
+        Name: holiday.name,
+        Address: holiday.description,
+        Status: holiday.status,
+        EffectiveYear: holiday.effectiveYear,
+        StartDate: holiday.startDate.toLocaleDateString(),
+        EndDate: holiday.endDate.toLocaleDateString(),
+      }));
+
+      return downloadCsv(res, data, "holiday");
+    }
     return res.status(200).json(
       ApiResponse.success(
         {

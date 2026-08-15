@@ -8,6 +8,7 @@ import {
 import { ApiResponse } from "../../shared/response/api-response";
 import { status } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createDepartment = async (
   req: Request,
@@ -58,14 +59,13 @@ export const getDepartments = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -84,17 +84,51 @@ export const getDepartments = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
-    const [departments, total] = await Promise.all([
-      DepartmentModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const departmentQ = DepartmentModel.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      departmentQ.skip(skip).limit(limit);
+    } else {
+      departmentQ
+        .populate({
+          path: "assignments.branchId",
+          select: "name",
+        })
+        .populate({
+          path: "assignments.shiftIds",
+          select: "name",
+        });
+    }
+
+    const [departments, total] = await Promise.all([
+      departmentQ,
       DepartmentModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = departments.map((department) => ({
+        Name: department.name,
+        Status: department.status,
+        Assignments: department.assignments
+          .map((assign: any) => {
+            const branchName = assign.branchId?.name || "";
+
+            const shifts =
+              assign.shiftIds?.length > 0
+                ? `(${assign.shiftIds.map((shift: any) => shift.name).join(", ")})`
+                : "";
+
+            return `${branchName} ${shifts}`.trim();
+          })
+          .join(", "),
+      }));
+
+      return downloadCsv(res, data, "department");
+    }
 
     return res.status(200).json(
       ApiResponse.success(

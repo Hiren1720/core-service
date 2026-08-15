@@ -6,6 +6,7 @@ import {
 } from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { status } from "../../types/types";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const createDesignation = async (
   req: Request,
@@ -47,14 +48,13 @@ export const getDesignations = async (
 ) => {
   try {
     const page = Number(req.query.page) || 1;
-
     const limit = Number(req.query.limit) || 10;
 
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.toString() || "";
-
     const status = req.query.status?.toString();
+    const isDownload = req.query.isDownload === "true";
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -73,18 +73,30 @@ export const getDesignations = async (
       filter.status = { $ne: "DELETED" as status };
     }
 
-    const [designations, total] = await Promise.all([
-      DesignationModel.find(filter)
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const designationsQuery = DesignationModel.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      designationsQuery.skip(skip).limit(limit);
+    }
+
+    const [designations, total] = await Promise.all([
+      designationsQuery,
       DesignationModel.countDocuments(filter),
     ]);
 
+    if (isDownload) {
+      const data = designations.map((designation) => ({
+        Name: designation.name,
+        Description: designation.description,
+        Status: designation.status,
+      }));
+
+      return downloadCsv(res, data, "designation");
+    }
     return res.status(200).json(
       ApiResponse.success(
         {
