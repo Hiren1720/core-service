@@ -82,7 +82,7 @@ export const createDailyAttendance = async () => {
       // Leave
       //---------------------------------------
       let leaveRequestId = null;
-      let isHalfDay = null;
+      let isHalfDay = false;
       const leave = await LeaveRequestModel.findOne({
         userId: user._id,
         status: leaveStatusType.APPROVED,
@@ -163,6 +163,7 @@ export const createDailyAttendance = async () => {
             attendanceDate,
             attendanceStatus,
             leaveRequestId,
+            isHalfDay
           },
         },
       });

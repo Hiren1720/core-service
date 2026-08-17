@@ -41,15 +41,11 @@ const LateRuleSchema = new Schema(
       type: Number,
       default: 0,
     },
-    fullDayMinHours: {
+    minFullDayPercentage: {
       type: Number,
       default: 0,
     },
-    halfDayWorkMaxHours: {
-      type: Number,
-      default: 0,
-    },
-    halfDayWorkMinHours: {
+    minHalfDayPercentage: {
       type: Number,
       default: 0,
     },
