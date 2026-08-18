@@ -7,22 +7,14 @@ export interface AttendancePayrollResult {
     absentDays: number;
     halfDays: number;
     weeklyOffDays: number;
+    holidays: number;
     paidLeaveDays: number;
     lateMinutes: number;
     earlyExitMinutes: number;
     overtimeMinutes: number;
     lateCount: number;
-  };
-
-  deductions: {
-    absentDays: number;
-    lateSalaryCutDays: number;
-    halfDaySalaryDays: number;
-  };
-
-  earnings: {
-    overtimeMinutes: number;
     overtimeAmount: number;
+    lateSalaryCutDays: number;
   };
 }
 
@@ -62,17 +54,4 @@ export interface PayrollTotals {
   totalDeductions: number;
   grossPay: number;
   netPay: number;
-}
-
-export interface ReimbursementResult {
-  totalAmount: number;
-
-  details: {
-    reimbursementId: Types.ObjectId;
-    name: string;
-    description?: string;
-    date: Date;
-    amount: number;
-    status: string;
-  }[];
 }

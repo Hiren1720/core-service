@@ -42,6 +42,12 @@ export enum payslipValueType {
   FIXED = "FIXED",
 }
 
+export enum defaultDeductionType {
+  PT = "Professional Tax (PT)",
+  PF = "Provident Fund (PF)",
+  ESIC = "ESIC",
+}
+
 export enum employmentTypeType {
   PERMANENT = "PERMANENT",
   CONTRACT = "CONTRACT",

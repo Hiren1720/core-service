@@ -8,6 +8,7 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
 import { status } from "../../../types/types.js";
+import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
 
 export const createCompany = async (
     req: Request,
@@ -154,6 +155,7 @@ export const createCompany = async (
         });
 
         await session.commitTransaction();
+        await defaultDeduction(company._id.toString()); // add default deduction company wise
 
         return res.status(201).json(
             ApiResponse.success(

@@ -21,7 +21,7 @@ router.post(
     },
   ]),
   authenticateUser,
-  authorize("OWNER"),
+  authorize("OWNER", "EMPLOYEE"),
   createReimbursement,
 );
 

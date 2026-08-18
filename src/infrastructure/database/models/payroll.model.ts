@@ -73,6 +73,10 @@ const PayrollSchema = new Schema(
         type: Number,
         default: 0,
       },
+      holidays: {
+        type:Number,
+        default: 0
+      },
 
       paidLeaveDays: {
         type: Number,
@@ -98,6 +102,19 @@ const PayrollSchema = new Schema(
         type: Number,
         default: 0,
       },
+
+      overtimeMinutesAmount: {
+        type: Number,
+        default: 0,
+      },
+      lateCount: {
+        type: Number,
+        default: 0,
+      },
+      lateSalaryCutDays: {
+        type: Number,
+        default: 0,
+      },
     },
 
     // ------------------------------------------------
@@ -108,14 +125,6 @@ const PayrollSchema = new Schema(
       {
         type: {
           type: String,
-          enum: [
-            "BASIC",
-            "HRA",
-            "ALLOWANCE",
-            "OVERTIME",
-            "LEAVE_ENCASHMENT",
-            "OTHER",
-          ],
         },
         name: String,
         amount: {
@@ -184,20 +193,7 @@ const PayrollSchema = new Schema(
     // ------------------------------------------------
     // REIMBURSEMENTS
     // ------------------------------------------------
-
-    reimbursements: [
-      {
-        reimbursementId: {
-          type: Schema.Types.ObjectId,
-        },
-        category: String,
-        description: String,
-        claimedAmount: Number,
-        approvedAmount: Number,
-        status: String,
-        approvedBy: Schema.Types.ObjectId,
-      },
-    ],
+    reimbursements: [{ type: Schema.Types.ObjectId, ref: "Reimbursement" }],
 
     // ------------------------------------------------
     // FINAL TOTALS
@@ -237,7 +233,6 @@ const PayrollSchema = new Schema(
     generatedAt: Date,
     approvedAt: Date,
     paidAt: Date,
-    generatedBy: Schema.Types.ObjectId,
     approvedBy: Schema.Types.ObjectId,
   },
   {

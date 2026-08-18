@@ -9,6 +9,8 @@ import routes from "./routes/index.js";
 import path from "path";
 import { createDailyAttendance } from "./services/attendance.service";
 import { generateUserMonthlyPunchTestData } from "./test/generateUserMonthlyPunchTestData";
+import { generateEmployeePayroll } from "./services/payroll.service";
+import { defaultDeduction } from "./shared/helpers/defaultDeduction";
 
 const app = express();
 
@@ -47,4 +49,6 @@ app.use(errorMiddleware);
 
 // createDailyAttendance();
 // generateUserMonthlyPunchTestData("6a72f0f95fd6f853a3728612", 8, 2026)
+// generateEmployeePayroll("6a72f0f95fd6f853a3728612", 8, 2026)
+// defaultDeduction("6a72f0f95fd6f853a3728612")
 export default app;

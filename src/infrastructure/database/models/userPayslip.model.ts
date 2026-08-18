@@ -18,7 +18,14 @@ const UserPayslipSchema = new Schema(
       ref: "Payslip",
       required: true,
     },
-
+    allowPFDeduction: {
+      type: Boolean,
+      default: false,
+    },
+    allowESICDeduction: {
+      type: Boolean,
+      default: false,
+    },
     remarks: {
       type: String,
       default: "",

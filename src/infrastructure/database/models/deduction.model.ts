@@ -8,6 +8,7 @@ const DeductionSchema = new Schema(
       ref: "Company",
       required: true,
       index: true,
+      unique: true
     },
     details: [
       {
@@ -50,9 +51,5 @@ const DeductionSchema = new Schema(
   },
 );
 
-DeductionSchema.index({
-  companyId: 1,
-  status: 1,
-});
 
 export const DeductionModel = model("Deduction", DeductionSchema);
