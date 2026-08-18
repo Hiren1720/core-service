@@ -40,7 +40,7 @@ app.use(requestLogger);
 app.use("/api", routes);
 
 app.get("/", (_req, res) => {
-    res.send("CRM Backend Running");
+    res.send("CRM Backend Running on 5000");
 });
 
 app.use(errorMiddleware);
