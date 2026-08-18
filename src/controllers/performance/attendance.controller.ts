@@ -63,7 +63,7 @@ export const getAttendanceCountByDate = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
-      attendanceDate: new Date(date as string),
+      attendanceDate: normalizeDate(new Date(date as string)),
     };
 
     const [present, absent, leave] = await Promise.all([

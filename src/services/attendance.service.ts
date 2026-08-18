@@ -12,7 +12,7 @@ import {
 import { attendanceType, leaveStatusType, userStatus } from "../types/types";
 import { normalizeDate } from "../shared/helpers/dateHelper";
 
-const weekDays = [
+export const weekDays = [
   "SUNDAY",
   "MONDAY",
   "TUESDAY",
@@ -22,7 +22,7 @@ const weekDays = [
   "SATURDAY",
 ];
 
-const getSaturdayRule = (date: Date) => {
+export const getSaturdayRule = (date: Date) => {
   const day = date.getDay();
 
   // Sunday

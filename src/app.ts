@@ -8,6 +8,7 @@ import { requestLogger } from "./middleware/request.middleware";
 import routes from "./routes/index.js";
 import path from "path";
 import { createDailyAttendance } from "./services/attendance.service";
+import { generateUserMonthlyPunchTestData } from "./test/generateUserMonthlyPunchTestData";
 
 const app = express();
 
@@ -45,4 +46,5 @@ app.get("/", (_req, res) => {
 app.use(errorMiddleware);
 
 // createDailyAttendance();
+// generateUserMonthlyPunchTestData("6a72f0f95fd6f853a3728612", 8, 2026)
 export default app;
