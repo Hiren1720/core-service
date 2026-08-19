@@ -15,38 +15,21 @@ export interface AttendancePayrollResult {
     overtimeMinutes: number;
     overtimeRate: number;
     lateSalaryCutDays: number;
+    sandwichDays: number;
   };
 }
 
-export interface PayrollEarning {
+export interface EarningDeduction {
   type: string;
   name: string;
   amount: number;
+  isDeduction: boolean;
   calculation?: string;
   source: string;
   sourceId?: Types.ObjectId;
   metadata?: any;
 }
 
-export interface PayrollDeduction {
-  type:
-    | "ABSENT"
-    | "HALF_DAY"
-    | "LATE"
-    | "EARLY_EXIT"
-    | "TAX"
-    | "PF"
-    | "ESI"
-    | "LOP"
-    | "OTHER";
-
-  name: string;
-  amount: number;
-  calculation?: string;
-  source: "POLICY" | "ATTENDANCE" | "LEAVE" | "TAX" | "OTHER";
-  sourceId?: Types.ObjectId;
-  metadata?: any;
-}
 
 export interface PayrollTotals {
   totalEarnings: number;

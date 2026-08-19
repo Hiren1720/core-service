@@ -74,10 +74,13 @@ const PayrollSchema = new Schema(
         default: 0,
       },
       holidays: {
-        type:Number,
-        default: 0
+        type: Number,
+        default: 0,
       },
-
+      sandwichDays: {
+        type: Number,
+        default: 0,
+      },
       paidLeaveDays: {
         type: Number,
         default: 0,
@@ -120,8 +123,7 @@ const PayrollSchema = new Schema(
     // ------------------------------------------------
     // EARNINGS
     // ------------------------------------------------
-
-    earnings: [
+    salarySnapshot: [
       {
         type: {
           type: String,
@@ -131,6 +133,7 @@ const PayrollSchema = new Schema(
           type: Number,
           required: true,
         },
+        isDeduction: Boolean,
         calculation: {
           type: String,
         },
@@ -152,40 +155,31 @@ const PayrollSchema = new Schema(
       },
     ],
 
-    // ------------------------------------------------
-    // DEDUCTIONS
-    // ------------------------------------------------
-
-    deductions: [
-      {
+    salaryBreakdown: [
+       {
         type: {
           type: String,
-          enum: [
-            "ABSENT",
-            "HALF_DAY",
-            "LATE",
-            "EARLY_EXIT",
-            "UNPAID_LEAVE",
-            "TAX",
-            "PF",
-            "ESI",
-            "LOP",
-            "OTHER",
-          ],
         },
         name: String,
         amount: {
           type: Number,
           required: true,
         },
+        isDeduction: Boolean,
         calculation: {
           type: String,
         },
         source: {
           type: String,
-          enum: ["POLICY", "ATTENDANCE", "LEAVE", "TAX", "OTHER"],
+          enum: [
+            "PAYSLIP",
+            "TAX",
+            "OTHER",
+          ],
         },
-        sourceId: Schema.Types.ObjectId,
+        sourceId: {
+          type: Schema.Types.ObjectId,
+        },
         metadata: Schema.Types.Mixed,
       },
     ],
@@ -200,22 +194,27 @@ const PayrollSchema = new Schema(
     // ------------------------------------------------
 
     totals: {
-      totalEarnings: {
+      salaryAmount: {
         type: Number,
         default: 0,
       },
 
-      totalReimbursements: {
+      attendanceSalaryAmount: {
         type: Number,
         default: 0,
       },
 
-      totalDeductions: {
+      reimbursementsAmount: {
         type: Number,
         default: 0,
       },
 
-      netPay: {
+      deductionsAmount: {
+        type: Number,
+        default: 0,
+      },
+
+      netPayAmount: {
         type: Number,
         default: 0,
       },

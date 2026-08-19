@@ -65,7 +65,7 @@ export const getPayrolls = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.totalEarnings", "$totals.totalDeductions"],
+                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
               },
             },
           },
@@ -77,7 +77,7 @@ export const getPayrolls = async (
           $group: {
             _id: null,
             totalAmount: {
-              $sum: "$totals.totalReimbursements",
+              $sum: "$totals.reimbursementsAmount",
             },
           },
         },
@@ -92,10 +92,10 @@ export const getPayrolls = async (
         presentDays: payroll.presentDays,
         absentDays: payroll.absentDays,
         leaveDays: payroll.paidLeaveDays,
-        earnings: payroll.totals.totalEarnings,
-        deductions: payroll.totals.totalDeductions,
-        reimbursement: payroll.totals.totalReimbursements,
-        netPay: payroll.total.netPay,
+        earnings: payroll.totals.attendanceSalaryAmount,
+        deductions: payroll.totals.deductionsAmount,
+        reimbursement: payroll.totals.reimbursementsAmount,
+        netPay: payroll.total.netPayAmount,
       }));
 
       return downloadCsv(res, data, "payroll");

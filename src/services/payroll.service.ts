@@ -1,9 +1,7 @@
 import mongoose, { Types } from "mongoose";
 import {
   AttendancePayrollResult,
-  PayrollDeduction,
-  PayrollEarning,
-  PayrollTotals,
+  EarningDeduction,
 } from "../types/payroll.types";
 import {
   attendanceType,
@@ -20,6 +18,7 @@ import {
   UserPayslipModel,
   UserPolicyModel,
 } from "../infrastructure/database/models";
+import { getDaysInCurrentMonth } from "../shared/helpers/dateHelper";
 
 export const generateEmployeePayroll = async (
   userId: string,
@@ -109,15 +108,6 @@ export const generateEmployeePayroll = async (
     });
 
     // ---------------------------------------------
-    // 9. Salary breakdown
-    // ---------------------------------------------
-
-    const salaryBreakdown = calculateSalaryBreakdown(
-      payslip.salary,
-      payslip?.payslipId?.details as PayslipDetail[],
-    );
-
-    // ---------------------------------------------
     // 10. Reimbursements
     // ---------------------------------------------
 
@@ -126,33 +116,48 @@ export const generateEmployeePayroll = async (
     // ---------------------------------------------
     // 11. Earnings
     // ---------------------------------------------
-
-    const earnings = buildPayrollEarnings({
+    const attendancePayment = buildPaymentEarnings({
       salary: payslip.salary,
-      salaryBreakdown,
       shiftMinutes: employee?.shiftId?.minutes || 0,
       attendanceResult,
+      policy: policy?.policyId,
     });
 
     // ---------------------------------------------
     // 12. Deductions
     // ---------------------------------------------
-
     const deductions = buildPayrollDeductions({
       payslip: payslip,
-      attendanceResult,
       taxDeduction: deduction,
     });
+
+    // ---------------------------------------------
+    // 9. Salary breakdown
+    // ---------------------------------------------
+    const salaryBreakdown = calculateSalaryBreakdown(
+      attendancePayment.salaryBasedOnAttendance,
+      payslip?.payslipId?.details as PayslipDetail[],
+      deductions,
+    );
 
     // ---------------------------------------------
     // 13. Final totals
     // ---------------------------------------------
 
-    const totals = calculatePayrollTotals({
-      earnings,
-      deductions,
-      reimbursements: reimbursementResult,
-    });
+    const attendanceSalaryAmount = attendancePayment.salaryBasedOnAttendance;
+    const deductionsAmount = deductions.reduce(
+      (total, deduction) => total + (deduction.amount || 0),
+      0,
+    );
+    const reimbursementsAmount = reimbursementResult.totalAmount;
+    const totals = {
+      salaryAmount: payslip.salary,
+      attendanceSalaryAmount,
+      deductionsAmount,
+      reimbursementsAmount,
+      netPayAmount:
+        attendanceSalaryAmount + reimbursementsAmount - deductionsAmount,
+    };
 
     // ---------------------------------------------
     // 14. Save payroll snapshot
@@ -170,16 +175,13 @@ export const generateEmployeePayroll = async (
           periodStart,
           periodEnd,
 
-          //   employeeSnapshot: buildEmployeeSnapshot(employee),
-          //   salarySnapshot: buildSalarySnapshot(salary),
-
           attendance: attendanceResult.summary,
-          earnings,
-          deductions,
+          salaryBreakdown,
+          salarySnapshot: [
+            ...attendancePayment.earnings,
+            ...attendancePayment.deductions,
+          ],
           reimbursements: reimbursementResult.details,
-
-          //   leaveDetails: leaves,
-          //   policySnapshot: buildPolicySnapshot(policy),
 
           totals,
           status: "PROCESSED",
@@ -225,26 +227,14 @@ interface PayslipDetail {
   valueType: "PERCENTAGE" | "FIXED";
 }
 
-interface SalaryComponent {
-  name: string;
-  amount: number;
-  value: number | null;
-  valueType: string;
-  sourceId?: Types.ObjectId;
-}
-
-interface SalaryBreakdown {
-  grossSalary: number;
-  components: SalaryComponent[];
-}
-
 export const calculateSalaryBreakdown = (
   salary: number,
   details: PayslipDetail[],
-): SalaryBreakdown => {
+  deductions: EarningDeduction[],
+): EarningDeduction[] => {
   let totalDefinedAmount = 0;
 
-  const components: SalaryComponent[] = [];
+  const components: EarningDeduction[] = [];
 
   for (const detail of details) {
     if (detail.value === null || detail.value === undefined) {
@@ -260,10 +250,17 @@ export const calculateSalaryBreakdown = (
 
     components.push({
       name: detail.name,
+      type: detail.name,
+      isDeduction: false,
       amount,
-      value: detail.value,
-      valueType: detail.valueType,
-      sourceId: detail._id,
+      calculation:
+        detail.valueType === "PERCENTAGE"
+          ? detail.value.toString() + "%"
+          : detail.value.toString(),
+      source: "PAYSLIP",
+      metadata: {
+        sourceId: detail._id,
+      },
     });
   }
 
@@ -276,16 +273,19 @@ export const calculateSalaryBreakdown = (
   if (remainingAmount > 0) {
     components.push({
       name: "Other",
+      type: "OTHER",
+      isDeduction: false,
       amount: remainingAmount,
-      value: null,
-      valueType: "FIXED",
+      calculation: "salary - payslip component",
+      source: "PAYSLIP",
     });
   }
 
-  return {
-    grossSalary: salary,
-    components,
-  };
+  if (deductions.length) {
+    components.push(...deductions);
+  }
+
+  return components;
 };
 
 const calculateAttendancePayroll = ({
@@ -448,6 +448,66 @@ const calculateAttendancePayroll = ({
     }
   }
 
+  // check sandwich rule
+  let sandwichDays = 0;
+  if (policy?.sandwichRule?.enabled) {
+    const sortedAttendance = [...attendance].sort(
+      (a, b) =>
+        new Date(a.attendanceDate).getTime() -
+        new Date(b.attendanceDate).getTime(),
+    );
+
+    let index = 0;
+
+    while (index < sortedAttendance.length) {
+      const current = sortedAttendance[index];
+
+      // Start with LEAVE / ABSENT
+      if (!isLeaveLikeDay(current)) {
+        index++;
+        continue;
+      }
+
+      let nextIndex = index + 1;
+
+      // Find consecutive WEEK_OFF / HOLIDAY
+      while (
+        nextIndex < sortedAttendance.length &&
+        isSandwichEligibleDay(sortedAttendance[nextIndex], policy)
+      ) {
+        nextIndex++;
+      }
+
+      // Right side must be LEAVE / ABSENT
+      if (
+        nextIndex < sortedAttendance.length &&
+        isLeaveLikeDay(sortedAttendance[nextIndex])
+      ) {
+        const middleDays = nextIndex - index - 1;
+
+        // Must have at least one WEEK_OFF / HOLIDAY
+        if (middleDays > 0) {
+          // Include:
+          // left leave + middle off/holiday + right leave
+          sandwichDays += middleDays + 2;
+
+          // console.log("SANDWICH FOUND:", {
+          //   start: current.attendanceDate,
+          //   end: sortedAttendance[nextIndex].attendanceDate,
+          //   middleDays,
+          //   totalDays: middleDays + 2,
+          // });
+
+          // Skip the complete sequence
+          index = nextIndex + 1;
+          continue;
+        }
+      }
+
+      index++;
+    }
+  }
+
   return {
     summary: {
       totalWorkingDays,
@@ -463,182 +523,146 @@ const calculateAttendancePayroll = ({
       overtimeRate: policy.overtime.overtimeRate || 1,
       lateCount,
       lateSalaryCutDays,
+      sandwichDays,
     },
   };
 };
 
-export const buildPayrollEarnings = ({
+export const buildPaymentEarnings = ({
   salary,
-  salaryBreakdown,
   shiftMinutes,
   attendanceResult,
+  policy,
 }: {
   salary: number;
-  salaryBreakdown: SalaryBreakdown;
   shiftMinutes: number;
   attendanceResult: AttendancePayrollResult;
-}): PayrollEarning[] => {
-  const earnings: PayrollEarning[] = [];
-  function getDaysInCurrentMonth(): number {
-    const date = new Date();
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  }
+  policy: any;
+}): {
+  earnings: EarningDeduction[];
+  deductions: EarningDeduction[];
+  salaryBasedOnAttendance: number;
+} => {
+  const earnings: EarningDeduction[] = [];
+  const deductions: EarningDeduction[] = [];
+  const { overtimeMinutes, absentDays, lateSalaryCutDays, sandwichDays } =
+    attendanceResult.summary;
+
+  const {
+    overtime: { overtimeRate },
+  } = policy;
+
+  const daysInMonth = getDaysInCurrentMonth();
+
+  const dailySalary = salary / daysInMonth;
+
+  const minuteSalary = dailySalary / shiftMinutes;
+
+  const overtimeAmount = overtimeMinutes * minuteSalary * overtimeRate;
+
+  const absentDaysSalary = dailySalary * absentDays;
+
+  const lateMarkDaySalary = dailySalary * lateSalaryCutDays;
+
+  const sandwichDaysSalary = dailySalary * sandwichDays;
+
+  const calculatedSalary =
+    salary +
+    overtimeAmount -
+    absentDaysSalary -
+    lateMarkDaySalary -
+    sandwichDaysSalary;
+
+  const finalSalary = Math.max(0, calculatedSalary);
+
   // ---------------------------------------------
   // Salary components
   // ---------------------------------------------
-
-  for (const component of salaryBreakdown.components) {
-    earnings.push({
-      type: component.name,
-      name: component.name,
-      amount: component.amount,
-      calculation:
-        component.valueType === "PERCENTAGE"
-          ? `${component.value}%`
-          : "Fixed amount",
-      source: "SALARY",
-      sourceId: component.sourceId,
-      metadata: {
-        value: component.value,
-        valueType: component.valueType,
-      },
-    });
-  }
+  earnings.push({
+    type: "SALARY",
+    name: "Salary",
+    isDeduction: false,
+    amount: salary,
+    calculation: `Gross salary`,
+    source: "SALARY",
+    metadata: {},
+  });
 
   // ---------------------------------------------
   // Overtime
   // ---------------------------------------------
-
-  if (attendanceResult.summary.overtimeMinutes > 0) {
+  if (overtimeAmount > 0) {
     earnings.push({
       type: "OVERTIME",
       name: "Overtime",
-      amount:
-        attendanceResult.summary.overtimeMinutes *
-        (salary / getDaysInCurrentMonth() / shiftMinutes) *
-        attendanceResult.summary.overtimeRate,
-      calculation: `${attendanceResult.summary.overtimeMinutes} minutes`,
+      isDeduction: false,
+      amount: overtimeAmount,
+      calculation: `${overtimeMinutes} minutes`,
       source: "ATTENDANCE",
       metadata: {
-        overtimeMinutes: attendanceResult.summary.overtimeMinutes,
+        overtimeMinutes: overtimeMinutes,
       },
     });
   }
 
-  // ---------------------------------------------
-  // Reimbursements
-  // ---------------------------------------------
+  // absent days
+  if (absentDaysSalary > 0) {
+    deductions.push({
+      type: "ABSENT",
+      name: "Absent",
+      isDeduction: true,
+      amount: absentDaysSalary,
+      calculation: `${absentDays} days absent`,
+      source: "ATTENDANCE",
+      metadata: {
+        absentDays: absentDays,
+      },
+    });
+  }
 
-  // if (reimbursementResult.totalAmount > 0) {
-  //   for (const reimbursement of reimbursementResult.details) {
-  //     earnings.push({
-  //       type: "REIMBURSEMENT",
-  //       name: reimbursement.name,
-  //       amount: reimbursement.amount,
-  //       calculation: "Approved reimbursement",
-  //       source: "REIMBURSEMENT",
-  //       sourceId: reimbursement.reimbursementId,
-  //       metadata: {
-  //         date: reimbursement.date,
-  //         description: reimbursement.description,
-  //       },
-  //     });
-  //   }
-  // }
+  // Late mark days
+  if (lateMarkDaySalary > 0) {
+    deductions.push({
+      type: "LATE",
+      name: "late",
+      isDeduction: true,
+      amount: lateMarkDaySalary,
+      calculation: `${lateSalaryCutDays} days late`,
+      source: "ATTENDANCE",
+      metadata: {
+        lateSalaryCutDays: lateSalaryCutDays,
+      },
+    });
+  }
 
-  return earnings;
+  // Sandwich leaves
+  if (sandwichDaysSalary > 0) {
+    deductions.push({
+      type: "SANDWICH",
+      name: "Sandwich",
+      isDeduction: true,
+
+      amount: sandwichDaysSalary,
+      calculation: `${sandwichDays} days late`,
+      source: "ATTENDANCE",
+      metadata: {
+        sandwichDays: sandwichDays,
+      },
+    });
+  }
+
+  return { earnings, deductions, salaryBasedOnAttendance: finalSalary };
 };
 
 export const buildPayrollDeductions = ({
   payslip,
-  attendanceResult,
   taxDeduction,
 }: {
   payslip: any;
-  attendanceResult: AttendancePayrollResult;
   taxDeduction: any;
-}): PayrollDeduction[] => {
-  const deductions: PayrollDeduction[] = [];
-
-  const { summary } = attendanceResult;
+}): EarningDeduction[] => {
+  const deductions: EarningDeduction[] = [];
   const { salary, allowPFDeduction, allowESICDeduction } = payslip;
-
-  // --------------------------------------------------
-  // Daily salary
-  //
-  // Example:
-  // Salary = 30,000
-  // month days = 30
-  //
-  // Daily salary = 30,000 / 30
-  // --------------------------------------------------
-
-  if (summary.totalWorkingDays <= 0) {
-    return deductions;
-  }
-
-  const dailySalary =
-    salary /
-    (summary.totalWorkingDays + summary.holidays + summary.weeklyOffDays);
-
-  // --------------------------------------------------
-  // 1. Absent deduction
-  // --------------------------------------------------
-
-  if (summary.absentDays > 0) {
-    const amount = dailySalary * summary.absentDays;
-
-    deductions.push({
-      type: "ABSENT",
-      name: "Absent Deduction",
-      amount: Number(amount.toFixed(2)),
-      calculation: `${summary.absentDays} day(s) × ${dailySalary.toFixed(2)}`,
-      source: "ATTENDANCE",
-      metadata: {
-        days: summary.absentDays,
-        dailySalary,
-      },
-    });
-  }
-
-  // --------------------------------------------------
-  // 2. Late mark salary deduction
-  // --------------------------------------------------
-
-  if (summary.lateSalaryCutDays > 0) {
-    const amount = dailySalary * summary.lateSalaryCutDays;
-
-    deductions.push({
-      type: "LATE",
-      name: "Late Mark Deduction",
-      amount: Number(amount.toFixed(2)),
-      calculation: `${summary.lateSalaryCutDays} day(s) × ${dailySalary.toFixed(2)}`,
-      source: "POLICY",
-      metadata: {
-        lateCount: summary.lateCount,
-        salaryCutDays: summary.lateSalaryCutDays,
-        dailySalary,
-      },
-    });
-  }
-
-  // --------------------------------------------------
-  // 4. Half-day deduction
-  //
-  // Important:
-  //
-  // We DON'T directly deduct `halfDays`.
-  //
-  // Our attendance calculation already converts:
-  //
-  // Half day worked without leave
-  //     -> 0.5 PRESENT + 0.5 ABSENT
-  //
-  // Therefore the 0.5 is already included in
-  // absentDays.
-  //
-  // This prevents double deduction.
-  // --------------------------------------------------
 
   // Tax deductions
   if (taxDeduction?.details?.length > 0) {
@@ -651,11 +675,15 @@ export const buildPayrollDeductions = ({
       deductions.push({
         type: "TAX",
         name: detail.name,
+        isDeduction: true,
         amount:
           detail.valueType === payslipValueType.PERCENTAGE
             ? (salary * detail.value) / 100
             : Number(detail.value.toFixed(2)),
-        calculation: ``,
+        calculation:
+          detail.valueType === "PERCENTAGE"
+            ? detail.value.toString() + "%"
+            : detail.value.toString(),
         source: "TAX",
         metadata: {
           name: detail.name,
@@ -667,38 +695,6 @@ export const buildPayrollDeductions = ({
   }
 
   return deductions;
-};
-
-export const calculatePayrollTotals = ({
-  earnings,
-  deductions,
-  reimbursements,
-}: {
-  earnings: PayrollEarning[];
-  deductions: PayrollDeduction[];
-  reimbursements: { totalAmount: number; details: string[] };
-}): PayrollTotals => {
-  // Salary + overtime + other earnings
-  const totalEarnings = earnings.reduce(
-    (total, earning) => total + (earning.amount || 0),
-    0,
-  );
-
-  // All salary/payroll deductions
-  const totalDeductions = deductions.reduce(
-    (total, deduction) => total + (deduction.amount || 0),
-    0,
-  );
-
-  // Final amount employee receives
-  const netPay = totalEarnings + reimbursements.totalAmount - totalDeductions;
-
-  return {
-    totalEarnings: Number(totalEarnings.toFixed(2)),
-    totalReimbursements: Number(reimbursements.totalAmount.toFixed(2)),
-    totalDeductions: Number(totalDeductions.toFixed(2)),
-    netPay: Number(netPay.toFixed(2)),
-  };
 };
 
 const getApprovedReimbursements = async (
@@ -760,4 +756,29 @@ export const calculateReimbursements = (
     totalAmount: Number(totalAmount.toFixed(2)),
     details,
   };
+};
+
+const isLeaveLikeDay = (record: any): boolean => {
+  return (
+    record.attendanceStatus === attendanceType.LEAVE ||
+    record.attendanceStatus === attendanceType.ABSENT
+  );
+};
+
+const isSandwichEligibleDay = (record: any, policy: any): boolean => {
+  if (
+    record.attendanceStatus === attendanceType.WEEK_OFF &&
+    policy?.sandwichRule?.beforeAfterWeekOff
+  ) {
+    return true;
+  }
+
+  if (
+    record.attendanceStatus === attendanceType.HOLIDAY &&
+    policy?.sandwichRule?.beforeAfterHoliday
+  ) {
+    return true;
+  }
+
+  return false;
 };

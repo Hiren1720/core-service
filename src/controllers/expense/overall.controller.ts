@@ -64,6 +64,7 @@ export const getOverallExpensesCount = async (
       curruntPayrollFilter.payrollYear = Number(startDate.split("-")[0]);
       pastPayrollFilter.payrollMonth = Number(endDate.split("-")[1]);
       pastPayrollFilter.payrollYear = Number(endDate.split("-")[0]);
+  
     } else if (year && month) {
       // Current Month
       currentFilter.date = {
@@ -113,7 +114,7 @@ export const getOverallExpensesCount = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.totalEarnings", "$totals.totalDeductions"],
+                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
               },
             },
           },
@@ -134,7 +135,7 @@ export const getOverallExpensesCount = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.totalEarnings", "$totals.totalDeductions"],
+                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
               },
             },
           },
