@@ -402,6 +402,8 @@ export const assignRolesResponsibility = async (
       policyId,
       payslipId,
       salary,
+      allowESICDeduction,
+      allowPFDeduction,
       assignments,
       remarks = "",
     } = req.body;
@@ -478,6 +480,8 @@ export const assignRolesResponsibility = async (
             {
               userId,
               salary: salary ?? currentPayslip?.salary,
+              allowPFDeduction,
+              allowESICDeduction,
               payslipId: payslipId ?? currentPayslip?.payslipId,
               remarks,
               assignedBy,
