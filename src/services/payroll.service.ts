@@ -44,8 +44,9 @@ export const generateEmployeePayroll = async (
     // 2. Employee
     // ---------------------------------------------
 
-    const employee = await UserModel.findById(userId)
+    const employee: any = await UserModel.findById(userId)
       .select("companyId")
+      .populate("shiftId", "minutes")
       .lean();
 
     if (!employee) {
@@ -127,7 +128,9 @@ export const generateEmployeePayroll = async (
     // ---------------------------------------------
 
     const earnings = buildPayrollEarnings({
+      salary: payslip.salary,
       salaryBreakdown,
+      shiftMinutes: employee?.shiftId?.minutes || 0,
       attendanceResult,
     });
 
@@ -457,7 +460,7 @@ const calculateAttendancePayroll = ({
       lateMinutes,
       earlyExitMinutes,
       overtimeMinutes,
-      overtimeAmount: 0,
+      overtimeRate: policy.overtime.overtimeRate || 1,
       lateCount,
       lateSalaryCutDays,
     },
@@ -465,14 +468,21 @@ const calculateAttendancePayroll = ({
 };
 
 export const buildPayrollEarnings = ({
+  salary,
   salaryBreakdown,
+  shiftMinutes,
   attendanceResult,
 }: {
+  salary: number;
   salaryBreakdown: SalaryBreakdown;
+  shiftMinutes: number;
   attendanceResult: AttendancePayrollResult;
 }): PayrollEarning[] => {
   const earnings: PayrollEarning[] = [];
-
+  function getDaysInCurrentMonth(): number {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  }
   // ---------------------------------------------
   // Salary components
   // ---------------------------------------------
@@ -499,11 +509,14 @@ export const buildPayrollEarnings = ({
   // Overtime
   // ---------------------------------------------
 
-  if (attendanceResult.summary.overtimeAmount > 0) {
+  if (attendanceResult.summary.overtimeMinutes > 0) {
     earnings.push({
       type: "OVERTIME",
       name: "Overtime",
-      amount: attendanceResult.summary.overtimeAmount,
+      amount:
+        attendanceResult.summary.overtimeMinutes *
+        (salary / getDaysInCurrentMonth() / shiftMinutes) *
+        attendanceResult.summary.overtimeRate,
       calculation: `${attendanceResult.summary.overtimeMinutes} minutes`,
       source: "ATTENDANCE",
       metadata: {
@@ -555,9 +568,9 @@ export const buildPayrollDeductions = ({
   //
   // Example:
   // Salary = 30,000
-  // Working days = 26
+  // month days = 30
   //
-  // Daily salary = 30,000 / 26
+  // Daily salary = 30,000 / 30
   // --------------------------------------------------
 
   if (summary.totalWorkingDays <= 0) {

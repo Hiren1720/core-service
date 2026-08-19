@@ -394,10 +394,21 @@ export const PunchOutFn = async (
   // ========================================================
 
   if (!halfDayLeave) {
-    attendance.overtimeMinutes = Math.max(
-      0,
-      Math.floor((attendance.outTime.getTime() - shiftEnd.getTime()) / 60000),
-    );
+    const overtimeEnabled = policy?.overtime?.enable === true;
+
+    const overtimeMinimumMinutes = policy?.overtime?.minimumMinutes ?? 0;
+
+    if (overtimeEnabled && workedMinutes > shiftDurationMinutes) {
+      const extraMinutes = workedMinutes - shiftDurationMinutes;
+
+      if (extraMinutes >= overtimeMinimumMinutes) {
+        attendance.overtimeMinutes = extraMinutes;
+      } else {
+        attendance.overtimeMinutes = 0;
+      }
+    } else {
+      attendance.overtimeMinutes = 0;
+    }
   } else {
     attendance.overtimeMinutes = 0;
   }

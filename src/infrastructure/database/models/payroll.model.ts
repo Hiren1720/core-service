@@ -103,7 +103,7 @@ const PayrollSchema = new Schema(
         default: 0,
       },
 
-      overtimeMinutesAmount: {
+      overtimeRate: {
         type: Number,
         default: 0,
       },

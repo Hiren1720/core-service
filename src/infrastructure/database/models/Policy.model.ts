@@ -71,7 +71,7 @@ const OvertimeSchema = new Schema(
     },
 
     overtimeRate: {
-      //in percent
+      //in times not percent
       type: Number,
       default: 1,
     },

@@ -11,9 +11,9 @@ export interface AttendancePayrollResult {
     paidLeaveDays: number;
     lateMinutes: number;
     earlyExitMinutes: number;
-    overtimeMinutes: number;
     lateCount: number;
-    overtimeAmount: number;
+    overtimeMinutes: number;
+    overtimeRate: number;
     lateSalaryCutDays: number;
   };
 }

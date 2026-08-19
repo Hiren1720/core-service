@@ -6,15 +6,7 @@ export const normalizeDate = (date: Date | string): Date => {
     if (match) {
       const [, year, month, day] = match;
 
-      return new Date(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-        0,
-        0,
-        0,
-        0,
-      );
+      return new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0);
     }
   }
 
@@ -23,4 +15,24 @@ export const normalizeDate = (date: Date | string): Date => {
   normalized.setHours(0, 0, 0, 0);
 
   return normalized;
+};
+
+export const getTimeDifferenceInMinutes = (
+  startTime: string,
+  endTime: string,
+): number => {
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  let startTotalMinutes = startHour * 60 + startMinute;
+
+  let endTotalMinutes = endHour * 60 + endMinute;
+
+  // Overnight shift
+  if (endTotalMinutes <= startTotalMinutes) {
+    endTotalMinutes += 24 * 60;
+  }
+
+  return endTotalMinutes - startTotalMinutes;
 };

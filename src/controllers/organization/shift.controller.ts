@@ -4,6 +4,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { status } from "../../types/types";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getTimeDifferenceInMinutes } from "../../shared/helpers/dateHelper";
 
 export const createShift = async (
   req: Request,
@@ -29,6 +30,7 @@ export const createShift = async (
       breakStartTime,
       breakEndTime,
       branchIds,
+      minutes: getTimeDifferenceInMinutes(startTime, endTime),
     });
 
     await addUserHistory({
@@ -189,6 +191,7 @@ export const updateShift = async (
     if (breakEndTime !== undefined) shift.breakEndTime = breakEndTime;
 
     if (branchIds !== undefined) shift.branchIds = branchIds;
+    shift.minutes = getTimeDifferenceInMinutes(startTime, endTime);
 
     await shift.save();
 
