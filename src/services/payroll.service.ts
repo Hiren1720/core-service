@@ -677,17 +677,13 @@ export const calculatePayrollTotals = ({
     0,
   );
 
-  // Gross salary earnings before deductions
-  const grossPay = totalEarnings + reimbursements.totalAmount;
-
   // Final amount employee receives
-  const netPay = grossPay + reimbursements.totalAmount - totalDeductions;
+  const netPay = totalEarnings + reimbursements.totalAmount - totalDeductions;
 
   return {
     totalEarnings: Number(totalEarnings.toFixed(2)),
     totalReimbursements: Number(reimbursements.totalAmount.toFixed(2)),
     totalDeductions: Number(totalDeductions.toFixed(2)),
-    grossPay: Number(grossPay.toFixed(2)),
     netPay: Number(netPay.toFixed(2)),
   };
 };

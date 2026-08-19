@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import {
   OfficeExpenseModel,
+  PayrollModel,
   ReimbursementModel,
 } from "../../infrastructure/database/models";
 import { expenseStatus } from "../../types/types";
@@ -18,6 +19,14 @@ export const getOverallExpensesCount = async (
     };
 
     const pastFilter: any = {
+      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+    };
+
+    const curruntPayrollFilter: any = {
+      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+    };
+
+    const pastPayrollFilter: any = {
       companyId: new mongoose.Types.ObjectId(req.user!.companyId),
     };
 
@@ -50,6 +59,11 @@ export const getOverallExpensesCount = async (
         $gte: pastStart,
         $lte: pastEnd,
       };
+
+      curruntPayrollFilter.payrollMonth = Number(startDate.split("-")[1]);
+      curruntPayrollFilter.payrollYear = Number(startDate.split("-")[0]);
+      pastPayrollFilter.payrollMonth = Number(endDate.split("-")[1]);
+      pastPayrollFilter.payrollYear = Number(endDate.split("-")[0]);
     } else if (year && month) {
       // Current Month
       currentFilter.date = {
@@ -70,44 +84,82 @@ export const getOverallExpensesCount = async (
         $gte: new Date(previousYear, previousMonth - 1, 1),
         $lt: new Date(previousYear, previousMonth, 1),
       };
+      curruntPayrollFilter.payrollMonth = Number(month);
+      curruntPayrollFilter.payrollYear = Number(year);
+      pastPayrollFilter.payrollMonth = Number(previousMonth);
+      pastPayrollFilter.payrollYear = Number(previousYear);
     }
 
-    const [reimbursement, officeExpense, pastReimbursement, pastOfficeExpense] =
-      await Promise.all([
-        ReimbursementModel.aggregate([
-          { $match: { ...currentFilter, status: "APPROVED" as expenseStatus } },
-          { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
-        ]),
-        OfficeExpenseModel.aggregate([
-          { $match: { ...currentFilter, status: "APPROVED" as expenseStatus } },
-          { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
-        ]),
-        ReimbursementModel.aggregate([
-          { $match: { ...pastFilter, status: "APPROVED" as expenseStatus } },
-          { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
-        ]),
-        OfficeExpenseModel.aggregate([
-          { $match: { ...pastFilter, status: "APPROVED" as expenseStatus } },
-          { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
-        ]),
-      ]);
+    const [
+      reimbursement,
+      officeExpense,
+      salary,
+      pastReimbursement,
+      pastOfficeExpense,
+      pastSalary,
+    ] = await Promise.all([
+      ReimbursementModel.aggregate([
+        { $match: { ...currentFilter, status: "APPROVED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      OfficeExpenseModel.aggregate([
+        { $match: { ...currentFilter, status: "APPROVED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      PayrollModel.aggregate([
+        { $match: { ...curruntPayrollFilter } },
+        {
+          $group: {
+            _id: null,
+            totalAmount: {
+              $sum: {
+                $subtract: ["$totals.totalEarnings", "$totals.totalDeductions"],
+              },
+            },
+          },
+        },
+      ]),
+      ReimbursementModel.aggregate([
+        { $match: { ...pastFilter, status: "APPROVED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      OfficeExpenseModel.aggregate([
+        { $match: { ...pastFilter, status: "APPROVED" as expenseStatus } },
+        { $group: { _id: null, totalAmount: { $sum: "$amount" } } },
+      ]),
+      PayrollModel.aggregate([
+        { $match: { ...pastPayrollFilter } },
+        {
+          $group: {
+            _id: null,
+            totalAmount: {
+              $sum: {
+                $subtract: ["$totals.totalEarnings", "$totals.totalDeductions"],
+              },
+            },
+          },
+        },
+      ]),
+    ]);
 
     return res.status(200).json(
       ApiResponse.success(
         {
           total:
             (reimbursement[0]?.totalAmount || 0) +
-            (officeExpense[0]?.totalAmount || 0),
+            (officeExpense[0]?.totalAmount || 0) +
+            (salary[0]?.totalAmount || 0),
           reimbursement: reimbursement[0]?.totalAmount || 0,
           officeExpense: officeExpense[0]?.totalAmount || 0,
-          salary: 0,
+          salary: salary[0]?.totalAmount || 0,
           past: {
             total:
               (pastReimbursement[0]?.totalAmount || 0) +
-              (pastOfficeExpense[0]?.totalAmount || 0),
+              (pastOfficeExpense[0]?.totalAmount || 0) +
+              (pastSalary[0]?.totalAmount || 0),
             reimbursement: pastReimbursement[0]?.totalAmount || 0,
             officeExpense: pastOfficeExpense[0]?.totalAmount || 0,
-            salary: 0,
+            salary: pastSalary[0]?.totalAmount || 0,
           },
         },
         "Expense fetched successfully",

@@ -215,11 +215,6 @@ const PayrollSchema = new Schema(
         default: 0,
       },
 
-      grossPay: {
-        type: Number,
-        default: 0,
-      },
-
       netPay: {
         type: Number,
         default: 0,

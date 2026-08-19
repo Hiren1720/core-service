@@ -52,6 +52,5 @@ export interface PayrollTotals {
   totalEarnings: number;
   totalReimbursements: number;
   totalDeductions: number;
-  grossPay: number;
   netPay: number;
 }
