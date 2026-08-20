@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { forgotPassword, login, logout, refreshToken, resetPassword } from "../../controllers/auth/auth.controller.js";
+import { forgotPassword, login, logout, refreshToken, resetPassword, verifyForgotPasswordOtp } from "../../controllers/auth/auth.controller.js";
 
 const router = Router();
 
@@ -21,6 +21,11 @@ router.post(
 router.post(
     "/forgot-password",
     forgotPassword
+);
+
+router.post(
+    "/forgot-password/otp/verify",
+    verifyForgotPasswordOtp
 );
 
 router.post(

@@ -10,11 +10,13 @@ import {
 
 import { ApiResponse } from "../../shared/response/api-response.js";
 import {
+  OtpModel,
   UserModel,
   UserSessionModel,
 } from "../../infrastructure/database/models/index.js";
-import { status, userStatus } from "../../types/types.js";
+import { userStatus } from "../../types/types.js";
 import { sendMail } from "../../shared/services/mail.service.js";
+import { generateOtp } from "../../shared/utils/otpGenerate.js";
 
 export const login = async (
   req: Request,
@@ -22,7 +24,7 @@ export const login = async (
   next: NextFunction,
 ) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, platform } = req.body;
 
     const user = await UserModel.findOne({
       email,
@@ -33,6 +35,10 @@ export const login = async (
 
     if (!user) {
       return res.status(400).json(ApiResponse.error("Invalid credentials"));
+    }
+
+    if (user.role === "EMPLOYEE" && platform === "WEB") {
+      return res.status(403).json(ApiResponse.error("Forbidden"));
     }
 
     if (user.password) {
@@ -56,6 +62,7 @@ export const login = async (
       userId: user._id,
       refreshToken,
       ipAddress: req.ip || "",
+      platform,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
@@ -180,7 +187,7 @@ export const forgotPassword = async (
 
     const user = await UserModel.findOne({
       email,
-    }).select("+resetPasswordToken +resetPasswordExpires");
+    });
 
     if (!user) {
       return res
@@ -188,36 +195,115 @@ export const forgotPassword = async (
         .json(
           ApiResponse.success(
             null,
-            "If the account exists, a reset email has been sent.",
+            "If the account exists, an OTP has been sent.",
           ),
         );
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
+    // Remove previous OTPs
+    await OtpModel.deleteMany({
+      userId: user._id,
+      type: "forgotPassword",
+    });
 
-    user.resetPasswordToken = token;
+    const otp = generateOtp();
 
-    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
-
-    await user.save();
-
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    await OtpModel.create({
+      userId: user._id,
+      otp,
+      type: "forgotPassword",
+    });
 
     await sendMail({
       to: user.email,
-      subject: "Reset Password",
+      subject: "Password Reset OTP",
       html: `
-                <p>Click the link below to reset your password:</p>
-                <a href="${resetUrl}">
-                    Reset Password
-                </a>
-                <p>Valid for 15 minutes.</p>
-            `,
+        <div>
+          <h2>Password Reset</h2>
+          <p>
+            Use the following OTP to reset your password:
+          </p>
+          <h1 style="letter-spacing: 8px;">
+            ${otp}
+          </h1>
+          <p>
+            This OTP is valid for 5 minutes.
+          </p>
+          <p>
+            If you did not request a password reset,
+            please ignore this email.
+          </p>
+        </div>
+      `,
     });
 
     return res
       .status(200)
-      .json(ApiResponse.success(null, "Reset password email sent"));
+      .json(
+        ApiResponse.success(
+          null,
+          "If the account exists, an OTP has been sent.",
+        ),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyForgotPasswordOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Email and OTP are required"));
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await UserModel.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json(ApiResponse.success(null, "Given user not found!"));
+    }
+
+    const otpRecord = await OtpModel.findOne({
+      userId: user._id,
+      type: "forgotPassword",
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json(ApiResponse.error("OTP has been expired"));
+    }
+
+    if (otp !== otpRecord.otp) {
+      return res.status(400).json(ApiResponse.error("OTP is invalid"));
+    }
+
+    // Temporary password-reset token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    otpRecord.token = resetToken;
+
+    await otpRecord.save();
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          resetToken,
+        },
+        "OTP verified successfully",
+      ),
+    );
   } catch (error) {
     next(error);
   }
@@ -231,12 +317,26 @@ export const resetPassword = async (
   try {
     const { token, password } = req.body;
 
-    const user = await UserModel.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: {
-        $gt: new Date(),
-      },
-    }).select("+resetPasswordToken +resetPasswordExpires +password");
+    if (!token || !password) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Reset token and password are required"));
+    }
+
+    const otpRecord = await OtpModel.findOne({
+      token: token,
+      type: "forgotPassword",
+    });
+
+    if (!otpRecord) {
+      return res
+        .status(400)
+        .json(
+          ApiResponse.error("Verification failed, please verify otp again"),
+        );
+    }
+
+    const user = await UserModel.findById(otpRecord.userId).select("+password");
 
     if (!user) {
       return res
@@ -245,10 +345,6 @@ export const resetPassword = async (
     }
 
     user.password = await bcrypt.hash(password, 10);
-
-    user.resetPasswordToken = null;
-
-    user.resetPasswordExpires = null;
 
     await user.save();
 

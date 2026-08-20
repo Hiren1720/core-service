@@ -10,6 +10,7 @@ import { HolidayModel } from "./holiday.model.js";
 import { LeaveModel } from "./leave.model.js";
 import { LeaveRequestModel } from "./leaveRequest.model.js";
 import { OfficeExpenseModel } from "./officeExpense.model.js";
+import { OtpModel } from "./otp.model.js";
 import { PayrollModel } from "./payroll.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
@@ -40,6 +41,7 @@ export {
   LeaveModel,
   LeaveRequestModel,
   OfficeExpenseModel,
+  OtpModel,
   PayrollModel,
   PayslipModel,
   PolicyModel,
