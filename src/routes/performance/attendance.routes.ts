@@ -6,6 +6,7 @@ import {
 } from "../../controllers/performance/attendance.controller.js";
 import {
   getAttendanceByMonth,
+  getAttendanceCountByMonth,
   getMyTodayStatus,
   punchIn,
   punchOut,
@@ -20,6 +21,8 @@ router.post("/punch/out", authenticateUser, punchOut);
 router.get("/my/status", authenticateUser, getMyTodayStatus);
 
 router.get("/my/monthly", authenticateUser, getAttendanceByMonth);
+
+router.get("/my/monthly/count", authenticateUser, getAttendanceCountByMonth);
 
 router.get("/daily", authenticateUser, getAttendanceByDate);
 

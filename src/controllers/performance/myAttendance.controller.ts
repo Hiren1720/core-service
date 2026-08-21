@@ -5,6 +5,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { createUserDaySpecificAttendance } from "../../services/attendance.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { PunchInFn, PunchOutFn } from "../../services/punch.service";
+import { attendanceType } from "../../types/types";
 
 export const punchIn = async (
   req: Request,
@@ -121,7 +122,7 @@ export const getAttendanceByMonth = async (
 ) => {
   try {
     const { userId } = req.query;
-    const { month, year } = req.query;
+    const { month, year, status } = req.query;
 
     if (!userId || !month || !year) {
       return res.status(400).json({
@@ -139,9 +140,7 @@ export const getAttendanceByMonth = async (
     }
 
     const startDate = new Date(yearNumber, monthNumber - 1, 1);
-
     const endDate = new Date(yearNumber, monthNumber, 0);
-
     endDate.setHours(23, 59, 59, 999);
 
     const filter: any = {
@@ -152,6 +151,18 @@ export const getAttendanceByMonth = async (
         $lte: endDate,
       },
     };
+
+    if (status === "PRESENT") {
+      filter.attendanceStatus = attendanceType.PRESENT;
+    } else if (status === "ABSENT") {
+      filter.attendanceStatus = attendanceType.ABSENT;
+    } else if (status === "LEAVE") {
+      filter.leaveRequestId = { $ne: null };
+    } else if (status === "WEEK_OFF") {
+      filter.attendanceStatus = attendanceType.WEEK_OFF;
+    } else if (status === "HOLIDAY") {
+      filter.attendanceStatus = attendanceType.HOLIDAY;
+    }
 
     const [attendanceRecords, generatedDays] = await Promise.all([
       AttendanceModel.find(filter)
@@ -182,6 +193,106 @@ export const getAttendanceByMonth = async (
           list: [...attendanceRecords, ...generatedDays],
         },
         "Attendance fetched successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAttendanceCountByMonth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId } = req.query;
+    const { month, year, status } = req.query;
+
+    if (!userId || !month || !year) {
+      return res.status(400).json({
+        message: "userId, month and year are required",
+      });
+    }
+
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+
+    if (monthNumber < 1 || monthNumber > 12 || !yearNumber) {
+      return res.status(400).json({
+        message: "Invalid month or year",
+      });
+    }
+
+    const startDate = new Date(yearNumber, monthNumber - 1, 1);
+    const endDate = new Date(yearNumber, monthNumber, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const filter: any = {
+      companyId: req.user!.companyId,
+      userId,
+      attendanceDate: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    };
+
+    if (status === "PRESENT") {
+      filter.attendanceStatus = attendanceType.PRESENT;
+    } else if (status === "ABSENT") {
+      filter.attendanceStatus = attendanceType.ABSENT;
+    } else if (status === "LEAVE") {
+      filter.leaveRequestId = { $ne: null };
+    } else if (status === "WEEK_OFF") {
+      filter.attendanceStatus = attendanceType.WEEK_OFF;
+    } else if (status === "HOLIDAY") {
+      filter.attendanceStatus = attendanceType.HOLIDAY;
+    }
+
+    const attendanceRecords = await AttendanceModel.find(filter)
+      .select("attendanceStatus leaveRequestId")
+      .lean();
+
+    let present = 0;
+    let absent = 0;
+    let leave = 0;
+    let holiday = 0;
+    let weekOff = 0;
+    const total = attendanceRecords.length;
+
+    for (const attendance of attendanceRecords) {
+      if (attendance.leaveRequestId) {
+        leave++;
+        continue;
+      }
+
+      switch (attendance.attendanceStatus) {
+        case attendanceType.ABSENT:
+          absent++;
+          break;
+        case attendanceType.PRESENT:
+          present++;
+          break;
+        case attendanceType.WEEK_OFF:
+          weekOff++;
+          break;
+        case attendanceType.HOLIDAY:
+          holiday++;
+          break;
+      }
+    }
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          present,
+          absent,
+          leave,
+          holiday,
+          weekOff,
+          total,
+        },
+        "Attendance counts fetched successfully",
       ),
     );
   } catch (error) {
