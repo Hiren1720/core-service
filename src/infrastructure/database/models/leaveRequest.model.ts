@@ -10,6 +10,12 @@ const LeaveRequestSchema = new Schema(
       index: true,
     },
 
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      required: true,
+    },
+
     leaveId: {
       type: Schema.Types.ObjectId,
       ref: "Leave",
@@ -69,7 +75,7 @@ const LeaveRequestSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 LeaveRequestSchema.index({
@@ -77,7 +83,4 @@ LeaveRequestSchema.index({
   startDate: 1,
 });
 
-export const LeaveRequestModel = model(
-  "LeaveRequest",
-  LeaveRequestSchema
-);
+export const LeaveRequestModel = model("LeaveRequest", LeaveRequestSchema);

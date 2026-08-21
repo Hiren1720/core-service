@@ -1,11 +1,15 @@
 import { NextFunction, Request, Response } from "express";
 import {
+  AttendanceModel,
+  LeaveRequestModel,
   PromotionModel,
   ResignationModel,
   TerminationModel,
   UserModel,
 } from "../../infrastructure/database/models";
 import {
+  attendanceType,
+  leaveStatusType,
   promotionStatus,
   resignationStatus,
   status,
@@ -13,6 +17,7 @@ import {
   userStatus,
 } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
+import { normalizeDate } from "../../shared/helpers/dateHelper";
 
 export const workforceOverview = async (
   req: Request,
@@ -132,6 +137,92 @@ export const workforceOverview = async (
         "Workforce fetched successfully",
       ),
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const attendanceOverview = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const companyId = req.user!.companyId;
+    const { date } = req.query;
+
+    if (!date) {
+      res
+        .status(400)
+        .json(ApiResponse.error("Date needed to fetch attendance"));
+    }
+
+    const attendanceFilter: any = {
+      companyId,
+      attendanceDate: normalizeDate(new Date(date as string)),
+    };
+
+    const leavesFilter: any = {
+      companyId,
+      status: leaveStatusType.APPROVED,
+      startDate: {
+        $lte: normalizeDate(new Date(date as string)),
+      },
+      endDate: {
+        $gte: normalizeDate(new Date(date as string)),
+      },
+    };
+
+    const [attendances, leaves] = await Promise.all([
+      AttendanceModel.find(attendanceFilter)
+        .populate("userId", "firstName lastName profileImage")
+        .select("attendanceStatus")
+        .lean(),
+      LeaveRequestModel.find(leavesFilter)
+        .populate("userId", "firstName lastName profileImage")
+        .select("userId")
+        .lean(),
+    ]);
+
+    const totalEmployee = attendances.length;
+    const totalLeaves = leaves.length;
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalManual = 0;
+
+    for (const attendance of attendances) {
+      if (attendance.isManual) {
+        totalManual++;
+        continue;
+      }
+
+      switch (attendance.attendanceStatus) {
+        case attendanceType.ABSENT:
+          totalAbsent++;
+          break;
+
+        case attendanceType.PRESENT:
+          totalPresent++;
+          break;
+      }
+    }
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          {
+            totalEmployee,
+            totalLeaves,
+            totalAbsent,
+            totalPresent,
+            totalManual,
+            attendanceList: attendances,
+            leavesList: leaves,
+          },
+          "Attendance overview fetched",
+        ),
+      );
   } catch (error) {
     next(error);
   }

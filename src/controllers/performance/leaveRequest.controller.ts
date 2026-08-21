@@ -132,6 +132,7 @@ export const applyLeave = async (
         {
           userId,
           leaveId,
+          companyId,
           startDate: start,
           endDate: end,
           duration,
