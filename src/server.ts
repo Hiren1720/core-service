@@ -15,7 +15,7 @@ async function bootstrap() {
 
   // Non-critical dependency
   try {
-    await registerAttendanceScheduler();
+    // await registerAttendanceScheduler();
 
     logger.info("BullMQ initialized");
   } catch (error) {
