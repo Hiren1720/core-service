@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { UserHistoryModel } from "../../infrastructure/database/models";
+import {
+  UserAssignmentModel,
+  UserHistoryModel,
+} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 
 export const getUserHistoryByType = async (
@@ -16,6 +19,32 @@ export const getUserHistoryByType = async (
     };
     const data = await UserHistoryModel.find(query)
       .populate("assignedBy", "firstName lastName profileImage")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(data, "History fetch successfully"));
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getUserAssignmentHistory = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId } = req.query;
+
+    const data = await UserAssignmentModel.find({ userId: userId as string })
+      .populate("assignments.branchId", "name")
+      .populate(
+        "assignments.shiftId",
+        "name startTime endTime breakStartTime breakEndTime",
+      )
+      .populate("assignments.departmentId", "name")
       .sort({ createdAt: -1 })
       .lean();
 

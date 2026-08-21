@@ -280,7 +280,6 @@ export const getEmployeeById = async (
           "assignments.shiftId",
           "name startTime endTime breakStartTime breakEndTime",
         )
-        .populate("assignments.designationId", "name")
         .populate("assignments.departmentId", "name"),
 
       UserPolicyModel.findOne({ userId })
