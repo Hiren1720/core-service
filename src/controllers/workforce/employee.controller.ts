@@ -271,7 +271,7 @@ export const getEmployeeById = async (
     const { userId } = req.params;
 
     const [user, assignments, policy, payslip] = await Promise.all([
-      UserModel.findById(userId),
+      UserModel.findById(userId).populate("designationId", "name _id").lean(),
 
       UserAssignmentModel.findOne({ userId })
         .sort({ createdAt: -1 })
