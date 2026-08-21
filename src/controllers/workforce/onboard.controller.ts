@@ -9,6 +9,7 @@ import {
   BranchModel,
   ShiftModel,
   DepartmentModel,
+  DesignationModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
@@ -399,6 +400,7 @@ export const assignRolesResponsibility = async (
       role,
       employmentType,
       probationPeriod,
+      designationId,
       policyId,
       payslipId,
       salary,
@@ -519,13 +521,12 @@ export const assignRolesResponsibility = async (
               branchId: a.branchId.toString(),
               shiftId: a.shiftId.toString(),
               departmentId: a.departmentId.toString(),
-              designationId: a.designationId.toString(),
               reportingManagerId: a.reportingManagerId?.toString() ?? "",
               isReporting: a.isReporting,
             }))
             .sort((a, b) =>
-              `${a.branchId}${a.shiftId}${a.departmentId}${a.designationId}`.localeCompare(
-                `${b.branchId}${b.shiftId}${b.departmentId}${b.designationId}`,
+              `${a.branchId}${a.shiftId}${a.departmentId}`.localeCompare(
+                `${b.branchId}${b.shiftId}${b.departmentId}`,
               ),
             );
 
@@ -593,7 +594,37 @@ export const assignRolesResponsibility = async (
       user.role = role;
       operations.push(
         addUserHistory(
-          { userId, field: "role",fieldId: userId, fieldValue: role, remarks, assignedBy },
+          {
+            userId,
+            field: "role",
+            fieldId: userId,
+            fieldValue: role,
+            remarks,
+            assignedBy,
+          },
+          session,
+        ),
+      );
+    }
+
+    //designationId
+    if (designationId && user.designationId !== designationId) {
+      user.designationId = designationId;
+
+      const designation = await DesignationModel.findById(designationId)
+        .select("name")
+        .lean();
+        
+      operations.push(
+        addUserHistory(
+          {
+            userId,
+            field: "designation",
+            fieldValue: designation?.name,
+            fieldId: designationId,
+            remarks,
+            assignedBy,
+          },
           session,
         ),
       );
@@ -612,8 +643,6 @@ export const assignRolesResponsibility = async (
       user.branchId = reportingAssignment.branchId;
     if (reportingAssignment?.shiftId)
       user.shiftId = reportingAssignment.shiftId;
-    if (reportingAssignment?.designationId)
-      user.designationId = reportingAssignment.designationId;
     if (reportingAssignment?.departmentId)
       user.departmentId = reportingAssignment.departmentId;
 

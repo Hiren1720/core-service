@@ -20,12 +20,6 @@ const AssignmentSchema = new Schema(
       required: true,
     },
 
-     designationId: {
-      type: Schema.Types.ObjectId,
-      ref: "Designation",
-      required: true,
-    },
-
     reportingManagerId: {
       type: Schema.Types.ObjectId,
       ref: "User",
