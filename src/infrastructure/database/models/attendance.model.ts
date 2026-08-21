@@ -102,6 +102,10 @@ const AttendanceSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    isManual: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
@@ -109,10 +113,15 @@ const AttendanceSchema = new Schema(
   },
 );
 
-AttendanceSchema.index({
-  userId: 1,
-  attendanceDate: 1,
-});
+AttendanceSchema.index(
+  {
+    userId: 1,
+    attendanceDate: 1,
+  },
+  {
+    unique: true,
+  },
+);
 
 AttendanceSchema.index({
   companyId: 1,
