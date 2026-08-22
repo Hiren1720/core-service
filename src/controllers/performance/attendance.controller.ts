@@ -27,9 +27,6 @@ export const getAttendanceByDate = async (
     const [result, count] = await Promise.all([
       AttendanceModel.find(filter)
         .populate("userId", "firstName lastName profileImage role status")
-        .select(
-          "inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes earlyExitMinutes",
-        )
         .skip(skip)
         .limit(limit)
         .lean(),
