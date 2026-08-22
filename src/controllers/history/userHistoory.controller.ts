@@ -48,10 +48,10 @@ export const getUserAssignmentHistory = async (
         "assignments.shiftId",
         "name startTime endTime breakStartTime breakEndTime",
       )
-      .populate("assignments.assignedBy", "fisrtName, lastName, profileImage")
+      .populate("assignments.assignedBy", "firstName, lastName, profileImage")
       .populate(
         "assignments.reportingManagerId",
-        "fisrtName, lastName, profileImage",
+        "firstName, lastName, profileImage",
       )
       .populate("assignments.departmentId", "name")
       .select("assignments createdAt")
