@@ -17,6 +17,10 @@ export const getUserHistoryByType = async (
       field,
       fieldId,
     };
+    if (field === "designation") {
+      delete query.fieldId;
+      query.userId = fieldId;
+    }
     const data = await UserHistoryModel.find(query)
       .populate("assignedBy", "firstName lastName profileImage")
       .sort({ createdAt: -1 })
@@ -44,7 +48,13 @@ export const getUserAssignmentHistory = async (
         "assignments.shiftId",
         "name startTime endTime breakStartTime breakEndTime",
       )
+      .populate("assignments.assignedBy", "fisrtName, lastName, profileImage")
+      .populate(
+        "assignments.reportingManagerId",
+        "fisrtName, lastName, profileImage",
+      )
       .populate("assignments.departmentId", "name")
+      .select("assignments createdAt")
       .sort({ createdAt: -1 })
       .lean();
 

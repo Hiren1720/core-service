@@ -85,6 +85,24 @@ export const punchOut = async (
   }
 };
 
+export const manualPunch = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    next(error);
+  } finally {
+    await session.endSession();
+  }
+};
+
+
 export const getMyTodayStatus = async (
   req: Request,
   res: Response,
