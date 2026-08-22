@@ -5,9 +5,10 @@ import {
   DepartmentModel,
   ShiftModel,
   UserAssignmentModel,
+  UserModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
-import { status } from "../../types/types";
+import { status, userStatus } from "../../types/types";
 
 export const getDepartmentEmployeeList = async (
   req: Request,
@@ -42,80 +43,92 @@ export const getDepartmentEmployeeList = async (
       );
     }
 
-    const [departments, userAssignments] = await Promise.all([
-      DepartmentModel.find(departmentFilter)
-        .select("_id name assignments status")
-        .lean(),
+    const [departments, userAssignments, employeeCount, managerCount] =
+      await Promise.all([
+        DepartmentModel.find(departmentFilter)
+          .select("_id name assignments status")
+          .lean(),
 
-      UserAssignmentModel.aggregate([
-        {
-          $match: {
-            companyId: new mongoose.Types.ObjectId(companyId),
-          },
-        },
-        {
-          $sort: {
-            createdAt: -1,
-          },
-        },
-        {
-          $group: {
-            _id: "$userId",
-            assignment: {
-              $first: "$$ROOT",
+        UserAssignmentModel.aggregate([
+          {
+            $match: {
+              companyId: new mongoose.Types.ObjectId(companyId),
             },
           },
-        },
-        {
-          $replaceRoot: {
-            newRoot: "$assignment",
+          {
+            $sort: {
+              createdAt: -1,
+            },
           },
-        },
-        ...(Object.keys(assignmentMatch).length
-          ? [
-              {
-                $match: assignmentMatch,
+          {
+            $group: {
+              _id: "$userId",
+              assignment: {
+                $first: "$$ROOT",
               },
-            ]
-          : []),
-        {
-          $lookup: {
-            from: "users", // User collection name
-            localField: "userId",
-            foreignField: "_id",
-            as: "user",
-          },
-        },
-        {
-          $unwind: {
-            path: "$user",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        {
-          $match: {
-            "user.status": {
-              $in: [status.ACTIVE, status.INACTIVE],
             },
           },
-        },
-        {
-          $project: {
-            userId: 1,
-            companyId: 1,
-            assignments: 1,
-            createdAt: 1,
-
-            "user._id": 1,
-            "user.role": 1,
-            "user.firstName": 1,
-            "user.lastName": 1,
-            "user.profileImage": 1,
-            "user.status": 1,
+          {
+            $replaceRoot: {
+              newRoot: "$assignment",
+            },
           },
-        },
-      ]),
-    ]);
+          ...(Object.keys(assignmentMatch).length
+            ? [
+                {
+                  $match: assignmentMatch,
+                },
+              ]
+            : []),
+          {
+            $lookup: {
+              from: "users", // User collection name
+              localField: "userId",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          {
+            $unwind: {
+              path: "$user",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $match: {
+              "user.status": {
+                $in: [status.ACTIVE, status.INACTIVE],
+              },
+            },
+          },
+          {
+            $project: {
+              userId: 1,
+              companyId: 1,
+              assignments: 1,
+              createdAt: 1,
+
+              "user._id": 1,
+              "user.role": 1,
+              "user.firstName": 1,
+              "user.lastName": 1,
+              "user.profileImage": 1,
+              "user.status": 1,
+            },
+          },
+        ]),
+
+        UserModel.countDocuments({
+          role: "EMPLOYEE",
+          status: userStatus.ACTIVE,
+          companyId,
+        }),
+        UserModel.countDocuments({
+          role: "MANAGER",
+          status: userStatus.ACTIVE,
+          companyId,
+        }),
+      ]);
 
     const departmentCountMap = new Map<string, number>();
     const departmentManagerMap = new Map<string, any>();
@@ -162,7 +175,7 @@ export const getDepartmentEmployeeList = async (
       .status(200)
       .json(
         ApiResponse.success(
-          data,
+          { list: data, employeeCount, managerCount },
           "Branch shift department options fetched successfully",
         ),
       );
@@ -179,7 +192,14 @@ export const getBranchShiftDepartmentList = async (
   try {
     const companyId = req.user!.companyId;
 
-    const [branches, shifts, departments, userAssignments] = await Promise.all([
+    const [
+      branches,
+      shifts,
+      departments,
+      userAssignments,
+      employeeCount,
+      managerCount,
+    ] = await Promise.all([
       BranchModel.find({
         companyId,
         status: { $ne: status.DELETED },
@@ -264,6 +284,17 @@ export const getBranchShiftDepartmentList = async (
           },
         },
       ]),
+
+      UserModel.countDocuments({
+        role: "EMPLOYEE",
+        status: userStatus.ACTIVE,
+        companyId,
+      }),
+      UserModel.countDocuments({
+        role: "MANAGER",
+        status: userStatus.ACTIVE,
+        companyId,
+      }),
     ]);
 
     const branchCountMap = new Map<string, number>();
@@ -305,71 +336,70 @@ export const getBranchShiftDepartmentList = async (
       }
     }
 
-    const data = branches
-      .map((branch: any) => {
-        const branchShifts = shifts
-          .filter((shift: any) =>
-            shift.branchIds.some(
-              (id: any) => id.toString() === branch._id.toString(),
-            ),
-          )
-          .map((shift: any) => {
-            const shiftDepartments = departments
-              .filter((department: any) =>
-                department.assignments.some(
-                  (assignment: any) =>
-                    assignment.branchId.toString() === branch._id.toString() &&
-                    assignment.shiftIds.some(
-                      (id: any) => id.toString() === shift._id.toString(),
-                    ),
-                ),
-              )
-              .map((department: any) => ({
-                _id: department._id,
-                name: department.name,
-                status: department.status,
-                count:
-                  departmentCountMap.get(
-                    `${branch._id}_${shift._id}_${department._id}`,
-                  ) || 0,
-                manager: departmentManagerMap.get(
+    const data = branches.map((branch: any) => {
+      const branchShifts = shifts
+        .filter((shift: any) =>
+          shift.branchIds.some(
+            (id: any) => id.toString() === branch._id.toString(),
+          ),
+        )
+        .map((shift: any) => {
+          const shiftDepartments = departments
+            .filter((department: any) =>
+              department.assignments.some(
+                (assignment: any) =>
+                  assignment.branchId.toString() === branch._id.toString() &&
+                  assignment.shiftIds.some(
+                    (id: any) => id.toString() === shift._id.toString(),
+                  ),
+              ),
+            )
+            .map((department: any) => ({
+              _id: department._id,
+              name: department.name,
+              status: department.status,
+              count:
+                departmentCountMap.get(
                   `${branch._id}_${shift._id}_${department._id}`,
-                ),
-                employee:
-                  departmentEmployeeMap.get(
-                    `${branch._id}_${shift._id}_${department._id}`,
-                  ) || [],
-              }));
+                ) || 0,
+              manager: departmentManagerMap.get(
+                `${branch._id}_${shift._id}_${department._id}`,
+              ),
+              employee:
+                departmentEmployeeMap.get(
+                  `${branch._id}_${shift._id}_${department._id}`,
+                ) || [],
+            }));
 
-            return {
-              _id: shift._id,
-              name: shift.name,
-              startTime: shift.startTime,
-              endTime: shift.endTime,
-              breakStartTime: shift.breakStartTime,
-              breakEndTime: shift.breakEndTime,
-              departments: shiftDepartments,
-              status: shift.status,
-              count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
-            };
-          })
+          return {
+            _id: shift._id,
+            name: shift.name,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            breakStartTime: shift.breakStartTime,
+            breakEndTime: shift.breakEndTime,
+            departments: shiftDepartments,
+            status: shift.status,
+            count: shiftCountMap.get(`${branch._id}_${shift._id}`) || 0,
+          };
+        });
 
-        return {
-          _id: branch._id,
-          name: branch.name,
-          shifts: branchShifts,
-          address: branch.address,
-          status: branch.status,
-          branchType: branch.branchType,
-          count: branchCountMap.get(branch._id.toString()) || 0,
-        };
-      })
+      return {
+        _id: branch._id,
+        name: branch.name,
+        shifts: branchShifts,
+        address: branch.address,
+        status: branch.status,
+        branchType: branch.branchType,
+        count: branchCountMap.get(branch._id.toString()) || 0,
+      };
+    });
 
     return res
       .status(200)
       .json(
         ApiResponse.success(
-          data,
+          { list: data, managerCount, employeeCount },
           "Branch shift department options fetched successfully",
         ),
       );
