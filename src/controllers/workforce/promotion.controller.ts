@@ -60,6 +60,7 @@ export const getPromotions = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -102,7 +103,7 @@ export const getPromotions = async (
         EffectiveDate: promotion.effectiveDate.toLocaleDateString(),
       }));
 
-      return downloadCsv(res, data, "promotions");
+      return downloadCsv(res, data, "promotions", csvPassword);
     }
 
     return res.status(200).json(

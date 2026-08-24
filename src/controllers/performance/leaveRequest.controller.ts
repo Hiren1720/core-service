@@ -354,6 +354,7 @@ export const getLeavesApplications = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {};
 
@@ -395,7 +396,7 @@ export const getLeavesApplications = async (
         ApprovedAt: leave.approvedAt?.toLocaleDateString(),
       }));
 
-      return downloadCsv(res, data, "leaveApllications");
+      return downloadCsv(res, data, "leaveApllications", csvPassword);
     }
 
     return res.status(200).json(

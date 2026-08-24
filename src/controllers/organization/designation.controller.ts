@@ -55,6 +55,7 @@ export const getDesignations = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -95,7 +96,7 @@ export const getDesignations = async (
         Status: designation.status,
       }));
 
-      return downloadCsv(res, data, "designation");
+      return downloadCsv(res, data, "designation", csvPassword);
     }
     return res.status(200).json(
       ApiResponse.success(

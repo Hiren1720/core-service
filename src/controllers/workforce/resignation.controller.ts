@@ -60,6 +60,7 @@ export const getResignations = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -107,7 +108,7 @@ export const getResignations = async (
         LastWorkingDay: resignation.lastWorkingDate.toLocaleDateString(),
       }));
 
-      return downloadCsv(res, data, "resignations");
+      return downloadCsv(res, data, "resignations", csvPassword);
     }
 
     return res.status(200).json(

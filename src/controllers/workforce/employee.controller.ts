@@ -166,6 +166,7 @@ export const getEmployeeList = async (
   next: NextFunction,
 ) => {
   try {
+    // role, branch, shift, department filetr
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 

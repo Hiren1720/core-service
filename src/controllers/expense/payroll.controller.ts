@@ -17,6 +17,7 @@ export const getPayrolls = async (
 
     const search = req.query.search?.toString() || "";
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -98,7 +99,7 @@ export const getPayrolls = async (
         netPay: payroll.total.netPayAmount,
       }));
 
-      return downloadCsv(res, data, "payroll");
+      return downloadCsv(res, data, "payroll", csvPassword);
     }
 
     return res.status(200).json(

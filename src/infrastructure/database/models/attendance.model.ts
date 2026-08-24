@@ -102,10 +102,25 @@ const AttendanceSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    isManual: {
+    //manual punch
+    isManualPunchin: {
       type: Boolean,
       default: false,
-    }
+    },
+    manualPunchinBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    isManualPunchout: {
+      type: Boolean,
+      default: false,
+    },
+    manualPunchoutBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,

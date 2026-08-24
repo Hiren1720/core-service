@@ -54,6 +54,7 @@ export const getHolidays = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const effectiveYear =
       req.query.effectiveYear ?? Number(req.query.effectiveYear);
@@ -106,7 +107,7 @@ export const getHolidays = async (
         EndDate: holiday.endDate.toLocaleDateString(),
       }));
 
-      return downloadCsv(res, data, "holiday");
+      return downloadCsv(res, data, "holiday", csvPassword);
     }
     return res.status(200).json(
       ApiResponse.success(

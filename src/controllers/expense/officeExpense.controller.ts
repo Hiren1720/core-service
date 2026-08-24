@@ -112,6 +112,7 @@ export const getOfficeExpenses = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -166,7 +167,7 @@ export const getOfficeExpenses = async (
         PaymentMode: officeExpense.paymentMode,
       }));
 
-      return downloadCsv(res, data, "officeExpenses");
+      return downloadCsv(res, data, "officeExpenses", csvPassword);
     }
 
     return res.status(200).json(

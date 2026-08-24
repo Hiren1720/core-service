@@ -15,7 +15,7 @@ export const createBranch = async (
   next: NextFunction,
 ) => {
   try {
-    const { name, address, shiftApplicable, branchType } = req.body;
+    const { name, address, branchType } = req.body;
 
     const companyId = req.user!.companyId;
 
@@ -39,7 +39,6 @@ export const createBranch = async (
       companyId,
       name,
       address,
-      shiftApplicable,
       branchType,
     });
 
@@ -74,6 +73,7 @@ export const getBranches = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -113,7 +113,7 @@ export const getBranches = async (
         BranchType: branch.branchType,
       }));
 
-      return downloadCsv(res, data, "branch");
+      return downloadCsv(res, data, "branch", csvPassword);
     }
     return res.status(200).json(
       ApiResponse.success(
@@ -167,13 +167,11 @@ export const updateBranch = async (
       return res.status(404).json(ApiResponse.error("Branch not found"));
     }
 
-    const { name, address, shiftApplicable, branchType } = req.body;
+    const { name, address, branchType } = req.body;
 
     if (name !== undefined) branch.name = name;
-
     if (address !== undefined) branch.address = address;
 
-    if (shiftApplicable !== undefined) branch.shiftApplicable = shiftApplicable;
 
     if (branchType === "HEAD_OFFICE") {
       const headOffice = await BranchModel.findOne({

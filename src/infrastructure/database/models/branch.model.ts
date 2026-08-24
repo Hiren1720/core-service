@@ -20,10 +20,6 @@ const BranchSchema = new Schema(
             trim: true,
             default: "",
         },
-        shiftApplicable: {
-            type: Boolean,
-            default: false,
-        },
         branchType: {
             type: String,
             enum: ["HEAD_OFFICE", "BRANCH"],

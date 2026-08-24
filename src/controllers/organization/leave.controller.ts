@@ -51,6 +51,7 @@ export const getLeaves = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -92,7 +93,7 @@ export const getLeaves = async (
         Paid: leave.isPaid.toString(),
       }));
 
-      return downloadCsv(res, data, "leave");
+      return downloadCsv(res, data, "leave", csvPassword);
     }
     
     return res.status(200).json(

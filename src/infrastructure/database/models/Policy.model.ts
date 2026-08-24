@@ -100,22 +100,6 @@ const SandwichRuleSchema = new Schema(
   { _id: false },
 );
 
-/* ---------------- Carry forward leave ---------------- */
-const CarryForwardLeaveSchema = new Schema(
-  {
-    enabled: {
-      type: Boolean,
-      default: false,
-    },
-
-    maxLeaves: {
-      type: Number,
-      default: 1,
-    },
-  },
-  { _id: false },
-);
-
 /* ---------------- Continuous Leave ---------------- */
 const ContinuousLeaveSchema = new Schema(
   {
@@ -200,7 +184,6 @@ const PolicySchema = new Schema(
     lateRule: LateRuleSchema,
     overtime: OvertimeSchema,
     sandwichRule: SandwichRuleSchema,
-    carryForwardLeave: CarryForwardLeaveSchema,
     continuousLeave: ContinuousLeaveSchema,
     leaves: [LeaveSchema],
     manualPunch: ManualPunchSchema,
