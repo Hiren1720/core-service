@@ -21,20 +21,31 @@ router.post(
     },
   ]),
   authenticateUser,
-  authorize("OWNER", "EMPLOYEE"),
   createReimbursement,
 );
 
-router.get("/", authenticateUser, getReimbursements);
+router.get(
+  "/",
+  authenticateUser,
+  getReimbursements,
+);
 
-router.get("/count", authenticateUser, getReimbursementsCount);
+router.get(
+  "/count",
+  authenticateUser,
+  getReimbursementsCount,
+);
 
-router.get("/:reimbursementId", authenticateUser, getReimbursementById);
+router.get(
+  "/:reimbursementId",
+  authenticateUser,
+  getReimbursementById,
+);
 
 router.patch(
   "/status/:reimbursementId",
   authenticateUser,
-  authorize("OWNER"),
+  authorize("OWNER", "MANAGER"),
   updateReimbursementStatus,
 );
 

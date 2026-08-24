@@ -31,8 +31,24 @@ export const PunchInFn = async (
       .select("shiftId")
       .populate("shiftId", "startTime endTime"),
 
-    UserPolicyModel.findOne({ userId })
-      .sort({ createdAt: -1 })
+    UserPolicyModel.findOne({
+      userId,
+      $or: [
+        // Previous years
+        {
+          effectiveFromYear: { $lt: new Date().getFullYear() },
+        },
+        // Same year, requested month or earlier
+        {
+          effectiveFromYear: new Date().getFullYear(), // currunt year
+          effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+        },
+      ],
+    })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
       .select("policyId")
       .populate("policyId"),
   ]);
@@ -215,8 +231,24 @@ export const PunchOutFn = async (
       .select("shiftId")
       .populate("shiftId", "startTime endTime breakStartTime breakEndTime"),
 
-    UserPolicyModel.findOne({ userId })
-      .sort({ createdAt: -1 })
+    UserPolicyModel.findOne({
+      userId,
+      $or: [
+        // Previous years
+        {
+          effectiveFromYear: { $lt: new Date().getFullYear() },
+        },
+        // Same year, requested month or earlier
+        {
+          effectiveFromYear: new Date().getFullYear(), // currunt year
+          effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+        },
+      ],
+    })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
       .select("policyId")
       .populate("policyId"),
   ]);

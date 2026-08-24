@@ -89,9 +89,21 @@ export const processCompanyDailyAttendance = async ({
   // 5. Get latest user policies
   const userPolicies = await UserPolicyModel.find({
     userId: { $in: userIds },
+    $or: [
+      // Previous years
+      {
+        effectiveFromYear: { $lt: new Date().getFullYear() },
+      },
+      // Same year, requested month or earlier
+      {
+        effectiveFromYear: new Date().getFullYear(), // currunt year
+        effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+      },
+    ],
   })
     .sort({
-      createdAt: -1,
+      effectiveFromYear: -1,
+      effectiveFromMonth: -1,
     })
     .populate({
       path: "policyId",

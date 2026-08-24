@@ -56,9 +56,26 @@ export const generateEmployeePayroll = async (
     // 3. Salary
     // ---------------------------------------------
 
-    const payslip: any = await UserPayslipModel.findOne({ userId })
-      .populate("payslipId")
-      .sort({ createdAt: -1 });
+    const payslip: any = await UserPayslipModel.findOne({
+      userId,
+      $or: [
+        // Previous years
+        {
+          effectiveFromYear: { $lt: payrollYear },
+        },
+        // Same year, requested month or earlier
+        {
+          effectiveFromYear: payrollYear, // currunt year
+          effectiveFromMonth: { $lte: payrollMonth }, // past month
+        },
+      ],
+    })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
+      .populate("payslipId");
+
     if (!payslip) {
       throw new Error("Payslip not found");
     }
@@ -66,9 +83,25 @@ export const generateEmployeePayroll = async (
     // 4. Policy
     // ---------------------------------------------
 
-    const policy: any = await UserPolicyModel.findOne({ userId }).populate(
-      "policyId",
-    );
+    const policy: any = await UserPolicyModel.findOne({
+      userId,
+      $or: [
+        // Previous years
+        {
+          effectiveFromYear: { $lt: payrollYear },
+        },
+        // Same year, requested month or earlier
+        {
+          effectiveFromYear: payrollYear, // currunt year
+          effectiveFromMonth: { $lte: payrollMonth }, // past month
+        },
+      ],
+    })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
+      .populate("policyId");
     if (!policy?.policyId) {
       throw new Error("Employee policy not found");
     }

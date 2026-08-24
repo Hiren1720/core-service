@@ -14,7 +14,16 @@ const UserPolicySchema = new Schema(
       ref: "Policy",
       required: true,
     },
-
+    effectiveFromMonth: {
+      type: Number,
+      required: true,
+      default: () => new Date().getMonth() + 1, // 1-12
+    },
+    effectiveFromYear: {
+      type: Number,
+      required: true,
+      default: () => new Date().getFullYear(),
+    },
     remarks: {
       type: String,
       default: "",

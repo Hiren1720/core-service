@@ -12,7 +12,16 @@ const UserPayslipSchema = new Schema(
       type: Number,
       required: true,
     },
-
+    effectiveFromMonth: {
+      type: Number,
+      required: true,
+      default: () => new Date().getMonth() + 1, // 1-12
+    },
+    effectiveFromYear: {
+      type: Number,
+      required: true,
+      default: () => new Date().getFullYear(),
+    },
     payslipId: {
       type: Schema.Types.ObjectId,
       ref: "Payslip",
@@ -42,6 +51,12 @@ const UserPayslipSchema = new Schema(
     versionKey: false,
   },
 );
+
+UserPayslipSchema.index({
+  userId: 1,
+  effectiveFromYear: -1,
+  effectiveFromMonth: -1,
+});
 
 UserPayslipSchema.index({ createdAt: -1 });
 

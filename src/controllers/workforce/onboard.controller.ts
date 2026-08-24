@@ -470,21 +470,16 @@ export const assignRolesResponsibility = async (
     }
 
     // Payslip
-    if (
-      (salary || payslipId) &&
-      (!currentPayslip ||
-        currentPayslip.salary !== Number(salary) ||
-        currentPayslip.payslipId.toString() !== payslipId)
-    ) {
+    if (salary && payslipId && !currentPayslip) {
       operations.push(
         UserPayslipModel.create(
           [
             {
               userId,
-              salary: salary ?? currentPayslip?.salary,
+              salary: salary,
               allowPFDeduction,
               allowESICDeduction,
-              payslipId: payslipId ?? currentPayslip?.payslipId,
+              payslipId: payslipId,
               remarks,
               assignedBy,
             },
@@ -614,7 +609,7 @@ export const assignRolesResponsibility = async (
       const designation = await DesignationModel.findById(designationId)
         .select("name")
         .lean();
-        
+
       operations.push(
         addUserHistory(
           {

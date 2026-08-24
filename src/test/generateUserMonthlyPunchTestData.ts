@@ -33,8 +33,22 @@ export const generateUserMonthlyPunchTestData = async (
 
     const userPolicy = await UserPolicyModel.findOne({
       userId,
+      $or: [
+        // Previous years
+        {
+          effectiveFromYear: { $lt: new Date().getFullYear() },
+        },
+        // Same year, requested month or earlier
+        {
+          effectiveFromYear: new Date().getFullYear(), // currunt year
+          effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+        },
+      ],
     })
-      .sort({ createdAt: -1 })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
       .populate("policyId")
       .lean();
 

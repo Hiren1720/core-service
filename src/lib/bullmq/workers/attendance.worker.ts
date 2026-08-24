@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { getRedisConnection } from "../../../config/redis.config";
-import { processCompanyDailyAttendance } from "../../../services/comapnyAttendace.service";
+import { processCompanyDailyAttendance } from "../../../services/companyAttendace.service";
 
 export const attendanceWorker = new Worker(
   "attendance",

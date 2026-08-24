@@ -133,9 +133,21 @@ export const createDailyAttendance = async () => {
       if (attendanceStatus === attendanceType.ABSENT) {
         const userPolicy = await UserPolicyModel.findOne({
           userId: user._id,
+          $or: [
+            // Previous years
+            {
+              effectiveFromYear: { $lt: new Date().getFullYear() },
+            },
+            // Same year, requested month or earlier
+            {
+              effectiveFromYear: new Date().getFullYear(), // currunt year
+              effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+            },
+          ],
         })
           .sort({
-            createdAt: -1,
+            effectiveFromYear: -1,
+            effectiveFromMonth: -1,
           })
           .populate("policyId");
 
@@ -163,7 +175,7 @@ export const createDailyAttendance = async () => {
             attendanceDate,
             attendanceStatus,
             leaveRequestId,
-            isHalfDay
+            isHalfDay,
           },
         },
       });
@@ -256,9 +268,21 @@ export const createUserDaySpecificAttendance = async (
     if (attendanceStatus === attendanceType.ABSENT) {
       const userPolicy = await UserPolicyModel.findOne({
         userId: user._id,
+        $or: [
+          // Previous years
+          {
+            effectiveFromYear: { $lt: new Date().getFullYear() },
+          },
+          // Same year, requested month or earlier
+          {
+            effectiveFromYear: new Date().getFullYear(), // currunt year
+            effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          },
+        ],
       })
         .sort({
-          createdAt: -1,
+          effectiveFromYear: -1,
+          effectiveFromMonth: -1,
         })
         .populate("policyId");
 

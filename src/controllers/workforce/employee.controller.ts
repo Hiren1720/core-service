@@ -281,14 +281,42 @@ export const getEmployeeById = async (
         )
         .populate("assignments.departmentId", "name"),
 
-      UserPolicyModel.findOne({ userId })
+      UserPolicyModel.findOne({
+        userId,
+        $or: [
+          // Previous years
+          {
+            effectiveFromYear: { $lt: new Date().getFullYear() },
+          },
+          // Same year, requested month or earlier
+          {
+            effectiveFromYear: new Date().getFullYear(), // currunt year
+            effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          },
+        ],
+      })
         .sort({
-          createdAt: -1,
+          effectiveFromYear: -1,
+          effectiveFromMonth: -1,
         })
         .populate("policyId", "name"),
 
-      UserPayslipModel.findOne({ userId }).sort({
-        createdAt: -1,
+      UserPayslipModel.findOne({
+        userId,
+        $or: [
+          // Previous years
+          {
+            effectiveFromYear: { $lt: new Date().getFullYear() },
+          },
+          // Same year, requested month or earlier
+          {
+            effectiveFromYear: new Date().getFullYear(), // currunt year
+            effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          },
+        ],
+      }).sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
       }),
     ]);
 
@@ -367,6 +395,142 @@ export const myManagedEmployeeList = async (
     return res
       .status(200)
       .json(ApiResponse.success(users, "Employees fetched successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateEmployeeSalary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.user!;
+
+    const { userId, salary, effectiveFromMonth, effectiveFromYear, remarks } =
+      req.body;
+
+    if (!userId || !salary || !effectiveFromMonth || !effectiveFromYear) {
+      throw new Error(
+        "userId, salary, effectiveFromMonth and effectiveFromYear are required",
+      );
+    }
+
+    // 1. Check if salary already exists for exact effective month/year
+    const existingPayslip = await UserPayslipModel.findOne({
+      userId,
+      effectiveFromMonth,
+      effectiveFromYear,
+    });
+
+    if (existingPayslip) {
+      // 2. Update existing record
+      existingPayslip.salary = salary;
+      if (remarks) existingPayslip.remarks = remarks;
+      existingPayslip.assignedBy = id as any;
+
+      await existingPayslip.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Employee salary updated successfully",
+        data: existingPayslip,
+      });
+    }
+
+    // 3. Delete all future salary records from currnut month
+    await UserPayslipModel.deleteMany({
+      userId,
+      $or: [
+        {
+          effectiveFromYear: {
+            $gt: new Date().getFullYear(),
+          },
+        },
+        {
+          effectiveFromYear: new Date().getFullYear(),
+          effectiveFromMonth: {
+            $gt: new Date().getMonth() + 1,
+          },
+        },
+      ],
+    });
+
+    const existing = await UserPayslipModel.findOne({ userId }).lean();
+    
+    // 4. Create new salary record
+    const newPayslip = await UserPayslipModel.create({
+      salary,
+      effectiveFromMonth,
+      effectiveFromYear,
+      assignedBy: id,
+      payslipId: existing?.payslipId,
+      allowESICDeduction: existing?.allowESICDeduction,
+      allowPFDeduction: existing?.allowPFDeduction,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Employee salary updated successfully",
+      data: newPayslip,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmployeeSalaryDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.query.userId as string;
+
+    const [current, upcoming] = await Promise.all([
+      UserPayslipModel.findOne({
+        userId,
+        $or: [
+          // Previous years
+          {
+            effectiveFromYear: { $lt: new Date().getFullYear() },
+          },
+          // Same year, requested month or earlier
+          {
+            effectiveFromYear: new Date().getFullYear(), // currunt year
+            effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          },
+        ],
+      })
+        .sort({
+          effectiveFromYear: -1,
+          effectiveFromMonth: -1,
+        })
+        .populate("payslipId"),
+      UserPayslipModel.findOne({
+        userId,
+        $or: [
+          {
+            effectiveFromYear: {
+              $gt: new Date().getFullYear(),
+            },
+          },
+          {
+            effectiveFromYear: new Date().getFullYear(),
+            effectiveFromMonth: {
+              $gt: new Date().getMonth() + 1,
+            },
+          },
+        ],
+      }),
+    ]);
+
+    return res.status(201).json({
+      success: true,
+      message: "Employee salary fetched successfully",
+      data: { current, upcoming },
+    });
   } catch (error) {
     next(error);
   }

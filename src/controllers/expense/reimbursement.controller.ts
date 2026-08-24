@@ -6,6 +6,7 @@ import { ReimbursementModel } from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { expenseStatus } from "../../types/types";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const createReimbursement = async (
   req: Request,
@@ -18,7 +19,6 @@ export const createReimbursement = async (
     session.startTransaction();
 
     const { companyId, id: assignedBy } = req.user!;
-
     const { name, userId, branchId, date, description, amount } = req.body;
 
     if (!name?.trim()) {
@@ -95,6 +95,7 @@ export const getReimbursements = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
@@ -103,7 +104,9 @@ export const getReimbursements = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
-    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -111,6 +114,13 @@ export const getReimbursements = async (
     const filter: any = {
       companyId: req.user!.companyId,
     };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: userIds };
+    }
 
     if (search) {
       filter.name = {
@@ -179,9 +189,17 @@ export const getReimbursementsCount = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
     const filter: any = {
       companyId: new mongoose.Types.ObjectId(req.user!.companyId),
     };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: userIds };
+    }
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;

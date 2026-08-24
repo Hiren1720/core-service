@@ -7,7 +7,9 @@ import {
   getEmployeeById,
   getEmployeeCount,
   getEmployeeList,
+  getEmployeeSalaryDetails,
   myManagedEmployeeList,
+  updateEmployeeSalary,
 } from "../../controllers/workforce/employee.controller.js";
 
 const router = Router();
@@ -29,6 +31,10 @@ router.put(
 router.get("/", authenticateUser, getEmployeeList);
 
 router.get("/count", authenticateUser, getEmployeeCount);
+
+router.get("/salary", authenticateUser, getEmployeeSalaryDetails);
+
+router.post("/salary", authenticateUser, updateEmployeeSalary);
 
 router.get("/:userId", authenticateUser, getEmployeeById)
 
