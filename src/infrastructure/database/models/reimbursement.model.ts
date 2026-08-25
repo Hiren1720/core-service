@@ -12,7 +12,6 @@ const ReimbursementSchema = new Schema(
     branchId: {
       type: Schema.Types.ObjectId,
       ref: "Branch",
-      required: true,
     },
     userId: {
       type: Schema.Types.ObjectId,

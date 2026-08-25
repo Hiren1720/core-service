@@ -2,7 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
-import { ReimbursementModel } from "../../infrastructure/database/models";
+import {
+  ReimbursementModel,
+  UserModel,
+} from "../../infrastructure/database/models";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { expenseStatus } from "../../types/types";
 import { downloadCsv } from "../../shared/utils/csvDownload";
@@ -19,9 +22,11 @@ export const createReimbursement = async (
     session.startTransaction();
 
     const { companyId, id: assignedBy } = req.user!;
-    const { name, userId, branchId, date, description, amount } = req.body;
+    const { name, userId, date, description, amount } = req.body;
 
-    if (!name?.trim()) {
+    const user = await UserModel.findById(userId).lean();
+
+    if (!name?.trim() && !user) {
       return res
         .status(400)
         .json(ApiResponse.error("Reimbursement name is required"));
@@ -58,7 +63,7 @@ export const createReimbursement = async (
       [
         {
           companyId,
-          branchId,
+          branchId: user?.branchId,
           userId,
           name: name.trim(),
           date,
