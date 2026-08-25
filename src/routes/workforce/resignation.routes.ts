@@ -13,7 +13,12 @@ import {
 
 const router = Router();
 
-router.post("/", authenticateUser, createResignation);
+router.post(
+  "/",
+  authenticateUser,
+  authorize("MANAGER", "EMPLOYEE"),
+  createResignation,
+);
 
 router.get("/", authenticateUser, getResignations);
 
@@ -24,17 +29,22 @@ router.get("/:resignationId", authenticateUser, getResignationById);
 router.put(
   "/:resignationId",
   authenticateUser,
-  // authorize("OWNER"),
+  authorize("MANAGER", "EMPLOYEE"),
   updateResignation,
 );
 
 router.patch(
   "/status/:resignationId",
   authenticateUser,
-  // authorize("OWNER"),
+  authorize("OWNER", "MANAGER"),
   updateResignationStatus,
 );
 
-router.post("/send-mail", authenticateUser, sendResignationAcceptedMail);
+router.post(
+  "/send-mail",
+  authenticateUser,
+  authorize("OWNER", "MANAGER"),
+  sendResignationAcceptedMail,
+);
 
 export default router;

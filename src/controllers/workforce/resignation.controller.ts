@@ -10,6 +10,7 @@ import { sendMail } from "../../shared/services/mail.service";
 import { resignationAcceptedTemplate } from "../../shared/templates/resignationAccepted";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const createResignation = async (
   req: Request,
@@ -52,6 +53,7 @@ export const getResignations = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
@@ -60,7 +62,9 @@ export const getResignations = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
-    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -72,6 +76,13 @@ export const getResignations = async (
     //     $options: "i",
     //   };
     // }
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: userIds };
+    }
 
     if (status) {
       filter.status = status;
@@ -131,9 +142,18 @@ export const getResignationCount = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
+
     const filter: any = {
       companyId: req.user!.companyId,
     };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: userIds };
+    }
 
     const [pending, accept, reject] = await Promise.all([
       ResignationModel.countDocuments({
@@ -206,7 +226,7 @@ export const updateResignation = async (
       return res.status(404).json(ApiResponse.error("Resignation not found"));
     }
 
-    const { userId, resignationType, lastWorkingDate, reason } = req.body;
+    const { userId, lastWorkingDate, reason } = req.body;
 
     if (userId !== undefined) resignation.userId = userId;
 
