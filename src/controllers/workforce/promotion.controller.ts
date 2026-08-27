@@ -60,7 +60,9 @@ export const getPromotions = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
-    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const filter: any = {
       companyId: req.user!.companyId,
@@ -228,6 +230,8 @@ export const updatePromotionStatus = async (
   next: NextFunction,
 ) => {
   try {
+    const { id } = req.user!;
+
     const { status, remarks } = req.body;
     const assignedBy = req.user!.id;
 
@@ -238,6 +242,12 @@ export const updatePromotionStatus = async (
 
     if (!promotion) {
       return res.status(404).json(ApiResponse.error("Promotion not found"));
+    }
+
+    if (id.toString() === promotion.toString()) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Cannot update own status"));
     }
 
     promotion.status = status;

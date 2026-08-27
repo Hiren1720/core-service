@@ -91,7 +91,7 @@ export const getResignations = async (
       filter.userId = id;
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
-      filter.userId = { $in: userIds };
+      filter.userId = { $in: [...userIds, id] };
     }
 
     if (status) {
@@ -162,7 +162,7 @@ export const getResignationCount = async (
       filter.userId = id;
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
-      filter.userId = { $in: userIds };
+      filter.userId = { $in: [...userIds, id] };
     }
 
     const [pending, accept, reject] = await Promise.all([
@@ -227,6 +227,8 @@ export const updateResignation = async (
   next: NextFunction,
 ) => {
   try {
+    const { id } = req.user!;
+
     const resignation = await ResignationModel.findOne({
       _id: req.params.resignationId,
       companyId: req.user!.companyId,
@@ -234,6 +236,12 @@ export const updateResignation = async (
 
     if (!resignation) {
       return res.status(404).json(ApiResponse.error("Resignation not found"));
+    }
+
+    if (id.toString() === resignation.toString()) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Cannot update own status"));
     }
 
     const { userId, lastWorkingDate, reason } = req.body;
