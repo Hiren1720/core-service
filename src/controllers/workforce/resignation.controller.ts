@@ -21,6 +21,16 @@ export const createResignation = async (
     const { id: assignedBy } = req.user!;
     const { userId, lastWorkingDate, reason } = req.body;
 
+    const existing = await ResignationModel.findOne({ userId })
+      .lean()
+      .select("status")
+      .sort({ createdAt: -1 });
+    if (existing?.status === resignationStatus.PENDING) {
+      return res
+        .json(400)
+        .json(ApiResponse.error("Last resignation still in pending state"));
+    }
+
     const resignation = await ResignationModel.create({
       companyId: req.user!.companyId,
       userId,

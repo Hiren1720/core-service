@@ -16,7 +16,6 @@ const router = Router();
 router.post(
   "/",
   authenticateUser,
-  authorize("MANAGER", "EMPLOYEE"),
   createResignation,
 );
 
