@@ -168,7 +168,7 @@ export const manualPunch = async (
       inTime: manual.inTime,
       outTime: manual.outTime,
     });
-    if (attendanceOut && manual.inTime) {
+    if (attendanceOut && manual.outTime) {
       attendanceOut.manualPunchOutBy = new mongoose.Types.ObjectId(id);
       attendanceOut.isManualPunchOut = true;
       await attendanceOut.save({ session });

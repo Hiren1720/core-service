@@ -93,7 +93,7 @@ export const PunchInFn = async (
       attendanceType.LEAVE,
     ].includes(attendance.attendanceStatus)
   ) {
-    throw new Error("Punch in not allowed today");
+    throw new Error(`Punch in not allowed on ${attendance.attendanceStatus}`);
   }
 
   // ========================================================
