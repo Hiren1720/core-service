@@ -124,7 +124,7 @@ export const getReimbursements = async (
       filter.userId = id;
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
-      filter.userId = { $in: userIds };
+      filter.userId = { $in: [...userIds, id] };
     }
 
     if (search) {
@@ -311,6 +311,7 @@ export const updateReimbursementStatus = async (
   next: NextFunction,
 ) => {
   try {
+    const { id } = req.user!;
     const { status, remarks } = req.body;
     const assignedBy = req.user!.id;
 
@@ -321,6 +322,12 @@ export const updateReimbursementStatus = async (
 
     if (!reimbursement) {
       return res.status(404).json(ApiResponse.error("Reimbursement not found"));
+    }
+
+    if (id.toString() === reimbursement.userId.toString()) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Cannot update own Reimbursement"));
     }
 
     reimbursement.status = status;

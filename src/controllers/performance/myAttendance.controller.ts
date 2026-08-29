@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
-import { AttendanceModel } from "../../infrastructure/database/models";
+import {
+  AttendanceModel,
+  UserPolicyModel,
+} from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { createUserDaySpecificAttendance } from "../../services/attendance.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
@@ -31,6 +34,7 @@ export const punchIn = async (
         : null,
       method,
       session,
+      null,
     );
 
     await session.commitTransaction();
@@ -70,6 +74,7 @@ export const punchOut = async (
         : null,
       method,
       session,
+      null,
     );
 
     await session.commitTransaction();
@@ -94,6 +99,86 @@ export const manualPunch = async (
 
   try {
     session.startTransaction();
+    const { id } = req.user!;
+    const { method = "WEB", userId, manual } = req.body;
+    if (!manual?.date) {
+      return res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            "Date, inTime and outTime required for manual puch.",
+          ),
+        );
+    }
+
+    const [policy, manualCount]: any = await Promise.all([
+      UserPolicyModel.findOne({
+        userId,
+        $or: [
+          // Previous years
+          {
+            effectiveFromYear: { $lt: new Date().getFullYear() },
+          },
+          // Same year, requested month or earlier
+          {
+            effectiveFromYear: new Date().getFullYear(), // currunt year
+            effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          },
+        ],
+      })
+        .sort({
+          effectiveFromYear: -1,
+          effectiveFromMonth: -1,
+        })
+        .populate("policyId")
+        .select("policyId"),
+
+      AttendanceModel.countDocuments({
+        userId,
+        $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
+      }),
+    ]);
+
+    if (
+      !policy?.policyId?.manualPunch?.enabled ||
+      policy?.policyId?.manualPunch?.limit <= manualCount
+    ) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Currunt Month Manual punch limit consumed"));
+    }
+
+    if (manual.inTime) {
+      const attendanceIn = await PunchInFn(
+        userId,
+        null,
+        method,
+        session,
+        manual,
+      );
+      if (attendanceIn) {
+        attendanceIn.manualPunchInBy = new mongoose.Types.ObjectId(id);
+        attendanceIn.isManualPunchIn = true;
+        await attendanceIn.save({ session });
+      }
+    }
+
+    const attendanceOut = await PunchOutFn(userId, null, method, session, {
+      date: manual.date,
+      inTime: manual.inTime,
+      outTime: manual.outTime,
+    });
+    if (attendanceOut && manual.inTime) {
+      attendanceOut.manualPunchOutBy = new mongoose.Types.ObjectId(id);
+      attendanceOut.isManualPunchOut = true;
+      await attendanceOut.save({ session });
+    }
+
+    await session.commitTransaction();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Manual punch successful"));
   } catch (error) {
     await session.abortTransaction();
     next(error);
@@ -101,7 +186,6 @@ export const manualPunch = async (
     await session.endSession();
   }
 };
-
 
 export const getMyTodayStatus = async (
   req: Request,
@@ -196,7 +280,7 @@ export const getAttendanceByMonth = async (
           },
         ])
         .select(
-          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes isLate earlyExitMinutes leaveRequestId",
+          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes isLate earlyExitMinutes leaveRequestId isManualPunchIn inManualPunchOut",
         )
         .sort({ attendanceDate: 1 })
         .lean(),

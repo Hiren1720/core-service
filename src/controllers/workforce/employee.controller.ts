@@ -9,6 +9,7 @@ import {
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
 import { status, userStatus } from "../../types/types";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const editUserDetail = async (
   req: Request,
@@ -166,6 +167,7 @@ export const getEmployeeList = async (
   next: NextFunction,
 ) => {
   try {
+    const { id, role } = req.user!;
     // role, branch, shift, department filetr
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -188,6 +190,13 @@ export const getEmployeeList = async (
         $regex: search,
         $options: "i",
       };
+    }
+
+    if (role === "EMPLOYEE") {
+      filter._id = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter._id = { $in: [...userIds, id] };
     }
 
     if (status) {
@@ -386,6 +395,7 @@ export const myManagedEmployeeList = async (
       departmentId: {
         $in: managesAssignments.map((el) => el.departmentId.toString()),
       },
+      _id: { $ne: userId },
       ...filter,
     };
 
@@ -458,7 +468,7 @@ export const updateEmployeeSalary = async (
     });
 
     const existing = await UserPayslipModel.findOne({ userId }).lean();
-    
+
     // 4. Create new salary record
     const newPayslip = await UserPayslipModel.create({
       salary,

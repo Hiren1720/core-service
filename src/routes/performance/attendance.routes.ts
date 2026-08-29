@@ -8,6 +8,7 @@ import {
   getAttendanceByMonth,
   getAttendanceCountByMonth,
   getMyTodayStatus,
+  manualPunch,
   punchIn,
   punchOut,
 } from "../../controllers/performance/myAttendance.controller.js";
@@ -17,6 +18,8 @@ const router = Router();
 router.post("/punch/in", authenticateUser, punchIn);
 
 router.post("/punch/out", authenticateUser, punchOut);
+
+router.post("/punch/manual", authenticateUser, manualPunch);
 
 router.get("/my/status", authenticateUser, getMyTodayStatus);
 

@@ -227,8 +227,6 @@ export const updateResignation = async (
   next: NextFunction,
 ) => {
   try {
-    const { id } = req.user!;
-
     const resignation = await ResignationModel.findOne({
       _id: req.params.resignationId,
       companyId: req.user!.companyId,
@@ -236,12 +234,6 @@ export const updateResignation = async (
 
     if (!resignation) {
       return res.status(404).json(ApiResponse.error("Resignation not found"));
-    }
-
-    if (id.toString() === resignation.toString()) {
-      return res
-        .status(404)
-        .json(ApiResponse.error("Cannot update own status"));
     }
 
     const { userId, lastWorkingDate, reason } = req.body;
@@ -269,6 +261,7 @@ export const updateResignationStatus = async (
   next: NextFunction,
 ) => {
   try {
+    const { id } = req.user!;
     const { status, remarks } = req.body;
     const assignedBy = req.user!.id;
 
@@ -279,6 +272,12 @@ export const updateResignationStatus = async (
 
     if (!resignation) {
       return res.status(404).json(ApiResponse.error("Resignation not found"));
+    }
+
+    if (id.toString() === resignation.userId.toString()) {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Cannot update own Resignation"));
     }
 
     resignation.status = status;

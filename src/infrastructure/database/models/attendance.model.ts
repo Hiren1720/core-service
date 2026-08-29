@@ -102,21 +102,22 @@ const AttendanceSchema = new Schema(
       type: Boolean,
       default: false,
     },
+
     //manual punch
-    isManualPunchin: {
+    isManualPunchIn: {
       type: Boolean,
       default: false,
     },
-    manualPunchinBy: {
+    manualPunchInBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
-    isManualPunchout: {
+    isManualPunchOut: {
       type: Boolean,
       default: false,
     },
-    manualPunchoutBy: {
+    manualPunchOutBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -147,6 +148,12 @@ AttendanceSchema.index({
   companyId: 1,
   userId: 1,
   attendanceDate: 1,
+});
+
+AttendanceSchema.index({
+  userId: 1,
+  isManualPunchIn: 1,
+  isManualPunchOut: 1,
 });
 
 export const AttendanceModel = model("Attendance", AttendanceSchema);

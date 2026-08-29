@@ -11,6 +11,7 @@ import { sendMail } from "../../shared/services/mail.service";
 import { promotionTemplate } from "../../shared/templates/promotion";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const createPromotion = async (
   req: Request,
@@ -52,6 +53,8 @@ export const getPromotions = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
+
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
@@ -75,6 +78,13 @@ export const getPromotions = async (
     //     $options: "i",
     //   };
     // }
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
 
     if (status) {
       filter.status = status;
@@ -128,9 +138,17 @@ export const getPromotionCount = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
     const filter: any = {
       companyId: req.user!.companyId,
     };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
 
     const [promoted, hold] = await Promise.all([
       PromotionModel.countDocuments({
@@ -244,7 +262,7 @@ export const updatePromotionStatus = async (
       return res.status(404).json(ApiResponse.error("Promotion not found"));
     }
 
-    if (id.toString() === promotion.toString()) {
+    if (id.toString() === promotion.userId.toString()) {
       return res
         .status(404)
         .json(ApiResponse.error("Cannot update own status"));

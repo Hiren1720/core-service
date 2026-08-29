@@ -38,7 +38,7 @@ export const getAttendanceByDate = async (
           },
         ])
         .select(
-          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes isLate earlyExitMinutes leaveRequestId",
+          "attendanceDate inTime outTime inLocation outLocation inMethod outMethod attendanceStatus isHalfDay totalWorkedMinutes lateMinutes isLate earlyExitMinutes leaveRequestId isManualPunchIn inManualPunchOut",
         )
         .skip(skip)
         .limit(limit)

@@ -191,7 +191,7 @@ export const attendanceOverview = async (
     let totalManual = 0;
 
     for (const attendance of attendances) {
-      if (attendance.isManualPunchin || attendance.isManualPunchout) {
+      if (attendance.isManualPunchIn || attendance.isManualPunchOut) {
         totalManual++;
         continue;
       }

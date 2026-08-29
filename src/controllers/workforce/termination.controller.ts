@@ -10,6 +10,7 @@ import { sendMail } from "../../shared/services/mail.service";
 import { terminationTemplate } from "../../shared/templates/termination";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const createTermination = async (
   req: Request,
@@ -53,6 +54,8 @@ export const getTerminations = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
+
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
@@ -76,6 +79,13 @@ export const getTerminations = async (
     //     $options: "i",
     //   };
     // }
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
 
     if (status) {
       filter.status = status;
@@ -136,9 +146,18 @@ export const getTerminationCount = async (
   next: NextFunction,
 ) => {
   try {
+    const { role, id } = req.user!;
+
     const filter: any = {
       companyId: req.user!.companyId,
     };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
 
     const [terminate, hold] = await Promise.all([
       TerminationModel.countDocuments({
@@ -252,7 +271,7 @@ export const updateTerminationStatus = async (
       return res.status(404).json(ApiResponse.error("Termination not found"));
     }
 
-    if (id.toString() === termination.toString()) {
+    if (id.toString() === termination.userId.toString()) {
       return res
         .status(404)
         .json(ApiResponse.error("Cannot update own status"));

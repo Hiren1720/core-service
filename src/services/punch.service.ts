@@ -17,9 +17,22 @@ export const PunchInFn = async (
   } | null,
   method: "MOBILE" | "WEB" | "BIOMETRIC" = "MOBILE",
   session: mongoose.ClientSession,
+  manual:
+    | {
+        date: string;
+        inTime: string;
+        outTime: string;
+      }
+    | null
+    | undefined,
 ) => {
   const now = new Date();
-  const attendanceDate = normalizeDate(now);
+
+  const attendanceDate = normalizeDate(manual?.date ?? now);
+
+  const inTime = manual?.inTime
+    ? buildDateTime(attendanceDate, manual.inTime)
+    : now;
 
   const [attendance, userShift, userPolicy] = await Promise.all([
     AttendanceModel.findOne({
@@ -69,25 +82,27 @@ export const PunchInFn = async (
   }
 
   // Already punched in
-  if (attendance.inTime) {
+  if (attendance.inTime && !manual?.inTime) {
     throw new Error("Already punched in today");
+  }
+
+  if (
+    [
+      attendanceType.HOLIDAY,
+      attendanceType.WEEK_OFF,
+      attendanceType.LEAVE,
+    ].includes(attendance.attendanceStatus)
+  ) {
+    throw new Error("Punch in not allowed today");
   }
 
   // ========================================================
   // Calculate complete shift start/end
   // ========================================================
 
-  const shiftStart = new Date(attendanceDate);
+  const shiftStart = buildDateTime(attendanceDate, shift.startTime);
 
-  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
-
-  shiftStart.setHours(startHour, startMinute, 0, 0);
-
-  const shiftEnd = new Date(attendanceDate);
-
-  const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-
-  shiftEnd.setHours(endHour, endMinute, 0, 0);
+  const shiftEnd = buildDateTime(attendanceDate, shift.endTime);
 
   // ========================================================
   // Determine applicable punch-in time
@@ -168,7 +183,7 @@ export const PunchInFn = async (
 
   const lateMinutes = Math.max(
     0,
-    Math.floor((now.getTime() - applicableStart.getTime()) / 60000),
+    Math.floor((inTime.getTime() - applicableStart.getTime()) / 60000),
   );
 
   // ========================================================
@@ -181,7 +196,7 @@ export const PunchInFn = async (
   // Save punch-in
   // ========================================================
 
-  attendance.inTime = now;
+  attendance.inTime = inTime;
   attendance.inLocation = location;
   attendance.inMethod = method;
 
@@ -216,9 +231,22 @@ export const PunchOutFn = async (
   } | null,
   method: "MOBILE" | "WEB" | "BIOMETRIC" = "MOBILE",
   session: mongoose.ClientSession,
+  manual:
+    | {
+        date: string;
+        inTime: string;
+        outTime: string;
+      }
+    | null
+    | undefined,
 ) => {
   const now = new Date();
-  const attendanceDate = normalizeDate(now);
+
+  const attendanceDate = normalizeDate(manual?.date ?? now);
+
+  const outTime = manual?.outTime
+    ? buildDateTime(attendanceDate, manual.outTime)
+    : now;
 
   // Get attendance, shift and policy
   const [attendance, userShift, userPolicy] = await Promise.all([
@@ -272,24 +300,16 @@ export const PunchOutFn = async (
     throw new Error("Punch-in time is missing");
   }
 
-  if (attendance.outTime) {
+  if (attendance.outTime && !manual) {
     throw new Error("Already punched out");
   }
 
   // ========================================================
   // Shift start / end
   // ========================================================
+  const shiftStart = buildDateTime(attendanceDate, shift.startTime);
 
-  const shiftStart = new Date(attendanceDate);
-  const [startHour, startMinute] = shift.startTime.split(":").map(Number);
-
-  shiftStart.setHours(startHour, startMinute, 0, 0);
-
-  const shiftEnd = new Date(attendanceDate);
-  const [endHour, endMinute] = shift.endTime.split(":").map(Number);
-
-  shiftEnd.setHours(endHour, endMinute, 0, 0);
-
+  const shiftEnd = buildDateTime(attendanceDate, shift.endTime);
   // ========================================================
   // Shift duration
   // ========================================================
@@ -363,7 +383,7 @@ export const PunchOutFn = async (
   // Save punch-out information
   // ========================================================
 
-  attendance.outTime = now;
+  attendance.outTime = outTime;
   attendance.outMethod = method;
   attendance.outLocation = location;
 
@@ -426,8 +446,7 @@ export const PunchOutFn = async (
   // ========================================================
 
   if (!halfDayLeave) {
-    const overtimeEnabled = policy?.overtime?.enable === true;
-
+    const overtimeEnabled = policy?.overtime?.enabled === true;
     const overtimeMinimumMinutes = policy?.overtime?.minimumMinutes ?? 0;
 
     if (overtimeEnabled && workedMinutes > shiftDurationMinutes) {
@@ -510,4 +529,13 @@ export const PunchOutFn = async (
   await attendance.save({ session });
 
   return attendance;
+};
+
+const buildDateTime = (date: Date, time: string): Date => {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  const result = new Date(date);
+  result.setHours(hours, minutes, 0, 0);
+
+  return result;
 };
