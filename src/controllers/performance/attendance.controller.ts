@@ -108,7 +108,11 @@ export const getAttendanceCountByDate = async (
   }
 };
 
-export const getManualPunchList = async (req: Request, res: Response, next: NextFunction) => {
+export const getManualPunchList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { role, id } = req.user!;
     const page = Number(req.query.page) || 1;
@@ -135,6 +139,7 @@ export const getManualPunchList = async (req: Request, res: Response, next: Next
         $gte: startDate,
         $lte: endDate,
       },
+      $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
     };
 
     if (role === "EMPLOYEE") {
@@ -148,7 +153,7 @@ export const getManualPunchList = async (req: Request, res: Response, next: Next
       AttendanceModel.find(filter)
         .populate("userId", "firstName lastName role profileImage")
         .select(
-          "attendanceDate inTime outTime  attendanceStatus  totalWorkedMinutes  isManualPunchIn isManualPunchOut",
+          "attendanceDate inTime outTime  attendanceStatus  totalWorkedMinutes  isManualPunchIn isManualPunchOut updatedAt",
         )
         .skip(skip)
         .limit(limit)

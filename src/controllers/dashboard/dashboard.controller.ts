@@ -275,3 +275,65 @@ export const getProfileCardDetails = async (
     next(e);
   }
 };
+
+export const myLeaveAndManualPunch = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.user!;
+
+    const { month, year } = req.query;
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+
+    if (monthNumber < 1 || monthNumber > 12 || !yearNumber) {
+      return res.status(400).json({
+        message: "Invalid month or year",
+      });
+    }
+
+    const startDate = new Date(yearNumber, monthNumber - 1, 1);
+    const endDate = new Date(yearNumber, monthNumber, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const [leaves, manualPunch] = await Promise.all([
+      LeaveRequestModel.find({
+        userId: id,
+        startDate: {
+          $gte: startDate,
+        },
+        endDate: {
+          $lte: endDate,
+        },
+      })
+        .populate("leaveId", "name")
+        .select("startDate duration status")
+        .lean(),
+
+      AttendanceModel.find({
+        attendanceDate: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+        $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
+      })
+        .select(
+          "attendanceDate inTime outTime  attendanceStatus  totalWorkedMinutes  isManualPunchIn isManualPunchOut",
+        )
+        .lean(),
+    ]);
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          { leaves, manualPunch },
+          "Leaves and manual punch feched succesfully",
+        ),
+      );
+  } catch (e) {
+    next(e);
+  }
+};
