@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import {
   AttendanceModel,
+  BranchModel,
+  DepartmentModel,
   LeaveRequestModel,
   PromotionModel,
   ResignationModel,
@@ -207,23 +209,69 @@ export const attendanceOverview = async (
       }
     }
 
-    return res
-      .status(200)
-      .json(
-        ApiResponse.success(
-          {
-            totalEmployee,
-            totalLeaves,
-            totalAbsent,
-            totalPresent,
-            totalManual,
-            attendanceList: attendances,
-            leavesList: leaves,
-          },
-          "Attendance overview fetched",
-        ),
-      );
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          totalEmployee,
+          totalLeaves,
+          totalAbsent,
+          totalPresent,
+          totalManual,
+          attendanceList: attendances,
+          leavesList: leaves,
+        },
+        "Attendance overview fetched",
+      ),
+    );
   } catch (error) {
     next(error);
+  }
+};
+
+export const getProfileCardDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id, role, companyId } = req.user!;
+
+    const user = await UserModel.findById(id)
+      .lean()
+      .populate("branchId", "name")
+      .populate("shiftId", "name startTime endTime")
+      .populate("departmentId", "name")
+      .populate("designationId", "name")
+      .select("role profileImage firstName lastName");
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("user not found"));
+    }
+
+    if (role === "EMPLOYEE" || role === "MANAGER") {
+      return res.status(200).json(
+        ApiResponse.success({
+          branches: [user.branchId],
+          shifts: [user.shiftId],
+          departments: [user?.departmentId],
+          user,
+        }),
+      );
+    } else {
+      const [branches, departments] = await Promise.all([
+        BranchModel.find({ companyId }).lean().select("name"),
+        DepartmentModel.find({ companyId }).lean().select("name"),
+      ]);
+      return res.status(200).json(
+        ApiResponse.success({
+          branches,
+          shifts: [],
+          departments: departments,
+          user,
+        }),
+      );
+    }
+  } catch (e) {
+    next(e);
   }
 };
