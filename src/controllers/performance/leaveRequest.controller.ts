@@ -17,6 +17,31 @@ import { addUserHistory } from "../../shared/services/userHistory.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
 
+export const getMyLeavesBucket = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id: userId } = req.user!;
+    const { year } = req.query;
+
+    const list = await UserLeaveBalanceModel.find({
+      userId,
+      year: Number(year),
+    })
+      .populate("leaveId", "name isPaid")
+      .select("allocated used pendingApproval")
+      .lean();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(list, "Leave bucket fetched"));
+  } catch (error: any) {
+    next(error);
+  }
+};
+
 export const applyLeave = async (
   req: Request,
   res: Response,
@@ -29,161 +54,168 @@ export const applyLeave = async (
 
     const companyId = req.user!.companyId as string;
 
-    const {
-      leaveId,
-      userId,
-      startDate,
-      endDate,
-      duration = "FULL_DAY",
-      reason = "",
-    } = req.body;
+    const { userId, reason = "", leaves } = req.body;
 
-    if (!leaveId || !startDate || !endDate) {
-      await session.abortTransaction();
-
-      return res
-        .status(400)
-        .json(ApiResponse.error("leaveId, startDate and endDate are required"));
+    if (!userId || !Array.isArray(leaves) || leaves.length === 0) {
+      throw new Error("userId and leaves are required");
     }
 
-    const start = normalizeDate(startDate);
-    const end = normalizeDate(endDate);
+    // Prevent duplicate dates in same request
+    const dates = leaves.map((leave: any) => leave.date);
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      await session.abortTransaction();
+    const uniqueDates = new Set(dates);
 
-      return res
-        .status(400)
-        .json(ApiResponse.error("Invalid start or end date"));
+    if (uniqueDates.size !== dates.length) {
+      throw new Error("Duplicate leave date found");
     }
 
-    if (start > end) {
-      await session.abortTransaction();
+    const createdLeaveRequests = [];
 
-      return res
-        .status(400)
-        .json(ApiResponse.error("Start date cannot be greater than end date"));
-    }
+    for (const leave of leaves) {
+      const { date, leaveId, duration = "FULL_DAY" } = leave;
 
-    // --------------------------------------------------
-    // Get user's current leave policy
-    // --------------------------------------------------
-    const { policy } = await validateLeavePolicy({
-      userId,
-      leaveId,
-      startDate: start,
-    });
+      if (!date || !leaveId) {
+        throw new Error("Each leave must contain date and leaveId");
+      }
 
-    // --------------------------------------------------
-    // Get weekly offs from policy
-    // --------------------------------------------------
-    const weeklyOffs = policy.workHours?.weeklyOffs || [];
+      if (!["FULL_DAY", "FIRST_HALF", "SECOND_HALF"].includes(duration)) {
+        throw new Error(`Invalid duration for ${date}`);
+      }
 
-    // --------------------------------------------------
-    // Calculate actual leave days.
-    // Weekly offs and company holidays are excluded.
-    // --------------------------------------------------
-    const totalDays = await calculateLeaveDays({
-      companyId,
-      startDate: start,
-      endDate: end,
-      duration,
-      weeklyOffs,
-    });
+      const leaveDate = normalizeDate(date);
 
-    if (totalDays <= 0) {
-      await session.abortTransaction();
+      if (Number.isNaN(leaveDate.getTime())) {
+        throw new Error(`Invalid leave date: ${date}`);
+      }
 
-      return res
-        .status(400)
-        .json(
-          ApiResponse.error("No working days available for selected dates"),
-        );
-    }
+      // --------------------------------------------------
+      // Validate leave policy for this particular date
+      // --------------------------------------------------
 
-    // --------------------------------------------------
-    // Check overlapping leave
-    // --------------------------------------------------
-    await validateLeaveOverlap(userId, start, end);
-
-    // --------------------------------------------------
-    // Check continuous leave rule
-    // --------------------------------------------------
-    if (policy.continuousLeave?.enabled) {
-      await validateContinuousLeave({
+      const { policy } = await validateLeavePolicy({
         userId,
-        startDate: start,
-        endDate: end,
-        maxLeaves: policy.continuousLeave.maxLeaves,
-        enabled: policy.continuousLeave.enabled,
+        leaveId,
+        startDate: leaveDate,
       });
-    }
 
-    // --------------------------------------------------
-    // Check available leave balance
-    // --------------------------------------------------
-    const leaveBalance = await validateLeaveBalance(userId, leaveId, totalDays);
+      const weeklyOffs = policy.workHours?.weeklyOffs || [];
 
-    // --------------------------------------------------
-    // Create leave request
-    // --------------------------------------------------
-    const [leaveRequest] = await LeaveRequestModel.create(
-      [
+      // --------------------------------------------------
+      // Calculate leave day
+      // --------------------------------------------------
+
+      const totalDays = await calculateLeaveDays({
+        companyId,
+        startDate: leaveDate,
+        endDate: leaveDate,
+        duration,
+        weeklyOffs,
+      });
+
+      if (totalDays <= 0) {
+        throw new Error(`No working day available for ${date}`);
+      }
+
+      // --------------------------------------------------
+      // Check overlap for this date
+      // --------------------------------------------------
+
+      await validateLeaveOverlap(userId, leaveDate, leaveDate);
+
+      // --------------------------------------------------
+      // Continuous leave rule
+      // --------------------------------------------------
+
+      if (policy.continuousLeave?.enabled) {
+        await validateContinuousLeave({
+          userId,
+          startDate: leaveDate,
+          endDate: leaveDate,
+          maxLeaves: policy.continuousLeave.maxLeaves,
+          enabled: policy.continuousLeave.enabled,
+        });
+      }
+
+      // --------------------------------------------------
+      // Validate balance for this particular leave type
+      // --------------------------------------------------
+
+      const leaveBalance = await validateLeaveBalance(
+        userId,
+        leaveId,
+        totalDays,
+      );
+
+      // --------------------------------------------------
+      // Create individual leave request
+      // --------------------------------------------------
+
+      const [leaveRequest] = await LeaveRequestModel.create(
+        [
+          {
+            userId,
+            leaveId,
+            companyId,
+            startDate: leaveDate,
+            endDate: leaveDate,
+            duration,
+            totalDays,
+            reason,
+            status: leaveStatusType.PENDING,
+          },
+        ],
+        {
+          session,
+        },
+      );
+
+      // --------------------------------------------------
+      // Reserve pending balance
+      // --------------------------------------------------
+
+      leaveBalance.pendingApproval += totalDays;
+
+      await leaveBalance.save({
+        session,
+      });
+
+      // --------------------------------------------------
+      // History
+      // --------------------------------------------------
+
+      await addUserHistory(
         {
           userId,
-          leaveId,
-          companyId,
-          startDate: start,
-          endDate: end,
-          duration,
-          totalDays,
-          reason,
-          status: leaveStatusType.PENDING,
+          field: "leaveApplicationStatus",
+          fieldValue: "PENDING",
+          fieldId: leaveRequest._id.toString(),
+          remarks: reason,
+          assignedBy: userId,
         },
-      ],
-      {
         session,
-      },
-    );
+      );
 
-    // --------------------------------------------------
-    // Reserve leave days as pending
-    // --------------------------------------------------
-
-    leaveBalance.pendingApproval += totalDays;
-
-    await leaveBalance.save({
-      session,
-    });
-
-    // --------------------------------------------------
-    // History
-    // --------------------------------------------------
-    await addUserHistory(
-      {
-        userId,
-        field: "leaveApplicationStatus",
-        fieldValue: "PENDING",
-        fieldId: leaveBalance._id.toString(),
-        remarks: reason,
-        assignedBy: userId,
-      },
-      session,
-    );
+      createdLeaveRequests.push(leaveRequest);
+    }
 
     await session.commitTransaction();
 
     return res
       .status(201)
-      .json(ApiResponse.success(leaveRequest, "Leave applied successfully"));
+      .json(
+        ApiResponse.success(
+          createdLeaveRequests,
+          "Leaves applied successfully",
+        ),
+      );
   } catch (error: any) {
     await session.abortTransaction();
 
     return res
       .status(400)
-      .json(ApiResponse.error(error?.message || "Failed to apply leave"));
+      .json(ApiResponse.error(error?.message || "Failed to apply leaves"));
   } finally {
-    session.endSession();
+    await session.endSession();
   }
 };
 
@@ -354,7 +386,9 @@ export const getLeavesApplications = async (
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
     const isDownload = req.query.isDownload === "true";
-    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const filter: any = {};
 

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { authenticateUser } from "../../middleware/user.middleware.js";
-import { applyLeave, getLeaveApplicationById, getLeaveApplicationCount, getLeavesApplications, updateLeaveApplicationStatus } from "../../controllers/performance/leaveRequest.controller.js";
+import { applyLeave, getLeaveApplicationById, getLeaveApplicationCount, getLeavesApplications, getMyLeavesBucket, updateLeaveApplicationStatus } from "../../controllers/performance/leaveRequest.controller.js";
 
 const router = Router();
+
+router.get("/bucket", authenticateUser, getMyLeavesBucket);
 
 router.post("/", authenticateUser, applyLeave);
 
