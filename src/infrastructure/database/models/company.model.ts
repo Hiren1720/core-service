@@ -63,22 +63,6 @@ const CompanySchema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "User"
         },
-        employeeStats: {
-            active: {
-                type: Number,
-                default: 0
-            },
-
-            inactive: {
-                type: Number,
-                default: 0
-            },
-
-            deleted: {
-                type: Number,
-                default: 0
-            }
-        }
     },
     {
         timestamps: true,

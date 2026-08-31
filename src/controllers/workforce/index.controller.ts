@@ -11,7 +11,7 @@ export const getCompanyDetailsforLetters = async (
     const companyId = req.user!.companyId;
 
     const company = await CompanyModel.findById(companyId)
-      .select("-__v -createdAt -updatedAt -employeeStats")
+      .select("-__v -createdAt -updatedAt")
       .lean();
 
     if (!company) {
