@@ -11,6 +11,7 @@ import { createDailyAttendance } from "./services/attendance.service";
 import { generateUserMonthlyPunchTestData } from "./test/generateUserMonthlyPunchTestData";
 import { generateEmployeePayroll } from "./services/payroll.service";
 import { defaultDeduction } from "./shared/helpers/defaultDeduction";
+import { processCompanyDailyAttendance } from "./services/companyAttendace.service";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.get("/", (_req, res) => {
 app.use(errorMiddleware);
 
 // createDailyAttendance();
+// processCompanyDailyAttendance({companyId:"6a312d0ca1023683916a1eaf", attendanceDate: new Date() });
 // generateUserMonthlyPunchTestData("6a72f0f95fd6f853a3728612", 8, 2026)
 // generateEmployeePayroll("6a72f0f95fd6f853a3728612", 8, 2026)
 // defaultDeduction("6a72f0f95fd6f853a3728612")

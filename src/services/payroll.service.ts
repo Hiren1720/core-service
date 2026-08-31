@@ -727,7 +727,75 @@ export const buildPayrollDeductions = ({
     }
   }
 
+  if (taxDeduction?.incomeDetails?.length > 0) {
+    const incomeTax = calculateIncomeTax(salary, taxDeduction.incomeDetails);
+    if (incomeTax > 0) {
+      deductions.push({
+        type: "TAX",
+        name: "TDS",
+        isDeduction: true,
+        amount: incomeTax,
+        calculation: "based on slab rate",
+        source: "TAX",
+        metadata: {},
+      });
+    }
+  }
+
   return deductions;
+};
+
+const calculateIncomeTax = (
+  salary: number,
+  incomeDetails: {
+    from: number | null;
+    to: number | null;
+    taxRate: number | null;
+  }[],
+) => {
+  if (!incomeDetails?.length || salary <= 0) {
+    return 0;
+  }
+
+  let totalTax = 0;
+
+  const slabs = [...incomeDetails].sort(
+    (a, b) => (a.from ?? 0) - (b.from ?? 0),
+  );
+
+  for (const slab of slabs) {
+    if (slab.from === null || slab.taxRate === null) {
+      continue;
+    }
+
+    const from = slab.from;
+    const to = slab.to;
+
+    // Salary is below this slab
+    if (salary <= from) {
+      continue;
+    }
+
+    // Determine taxable amount inside this slab
+    let taxableAmount: number;
+
+    if (to === null) {
+      // No upper limit
+      taxableAmount = salary - from;
+    } else {
+      taxableAmount = Math.min(salary, to) - from;
+    }
+
+    if (taxableAmount <= 0) {
+      continue;
+    }
+
+    const taxAmount = (taxableAmount * slab.taxRate) / 100;
+
+    totalTax += taxAmount;
+  }
+
+  return Number(totalTax.toFixed(2));
 };
 
 const getApprovedReimbursements = async (
