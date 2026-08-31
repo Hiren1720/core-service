@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { PayrollModel } from "../../infrastructure/database/models";
+import {
+  PayrollModel,
+  UserModel,
+  UserPayslipModel,
+} from "../../infrastructure/database/models";
 import { downloadCsv } from "../../shared/utils/csvDownload";
 import { ApiResponse } from "../../shared/response/api-response";
 import mongoose from "mongoose";
@@ -17,7 +21,9 @@ export const getPayrolls = async (
 
     const search = req.query.search?.toString() || "";
     const isDownload = req.query.isDownload === "true";
-    const csvPassword = req.query.csvPassword  ? String(req.query.csvPassword) : undefined;
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
@@ -66,7 +72,10 @@ export const getPayrolls = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
+                $subtract: [
+                  "$totals.attendanceSalaryAmount",
+                  "$totals.deductionsAmount",
+                ],
               },
             },
           },
@@ -114,6 +123,75 @@ export const getPayrolls = async (
         },
         "payroll fetched successfully",
       ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getEmployeeWiseYearlyPayrolls = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId, year } = req.query!;
+    if (!userId || !year) {
+      return res.status(404).json("UserId is Required");
+    }
+
+    const user = await UserModel.findById(userId)
+      .lean()
+      .populate("branchId", "name")
+      .populate("shiftId", "name startTime endTime")
+      .populate("departmentId", "name")
+      .populate("designationId", "name")
+      .select("role profileImage firstName lastName");
+
+    if (!user) {
+      return res.status(404).json("User Not found");
+    }
+
+    const requestedYear = Number(year);
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
+    const payslip: any = await UserPayslipModel.findOne({
+      userId: userId.toString(),
+
+      $or: [
+        {
+          effectiveFromYear: {
+            $lt: requestedYear,
+          },
+        },
+        {
+          effectiveFromYear: requestedYear,
+          effectiveFromMonth: {
+            $lte: requestedYear === currentYear ? currentMonth : 12,
+          },
+        },
+      ],
+    })
+      .sort({
+        effectiveFromYear: -1,
+        effectiveFromMonth: -1,
+      })
+      .select("salary");
+    
+    const payrolls = await PayrollModel.find({
+      payrollYear: requestedYear,
+    }).lean();
+
+    return res.status(200).json(
+      ApiResponse.success({
+        branches: [user.branchId],
+        shifts: [user.shiftId],
+        departments: [user?.departmentId],
+        user,
+        curruntSalary: payslip?.salary || 0,
+        payrolls,
+      }),
     );
   } catch (error) {
     next(error);
