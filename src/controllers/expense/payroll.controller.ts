@@ -181,6 +181,7 @@ export const getEmployeeWiseYearlyPayrolls = async (
     
     const payrolls = await PayrollModel.find({
       payrollYear: requestedYear,
+      userId: userId.toString()
     }).lean();
 
     return res.status(200).json(
