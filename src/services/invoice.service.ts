@@ -219,16 +219,6 @@ export const generatePreviousMonthInvoice = async ({
            * already paid/processed it.
            */
         },
-
-        $setOnInsert: {
-          paymentStatus: "PENDING",
-          paidAmount: 0,
-          paidAt: null,
-          paymentGateway: null,
-          paymentOrderId: null,
-          paymentTransactionId: null,
-          paymentReference: null,
-        },
       },
       {
         upsert: true,

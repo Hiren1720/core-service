@@ -125,51 +125,29 @@ const InvoiceSchema = new Schema(
       default: 0,
     },
 
-    currency: {
-      type: String,
-      default: "INR",
-    },
-
-    // Payment
-    paymentStatus: {
-      type: String,
-      enum: ["PENDING", "PARTIALLY_PAID", "PAID", "FAILED", "CANCELLED"],
-      default: "PENDING",
-      index: true,
-    },
-
-    paidAmount: {
-      type: Number,
-      default: 0,
-    },
-
-    paidAt: {
-      type: Date,
-      default: null,
-    },
-
-    // Gateway information
-    paymentGateway: {
-      type: String,
-      default: null,
-    },
-
-    paymentOrderId: {
-      type: String,
-      default: null,
-      index: true,
-    },
-
-    paymentTransactionId: {
-      type: String,
-      default: null,
-      index: true,
-    },
-
-    paymentReference: {
-      type: String,
-      default: null,
-    },
+    payments: [
+      {
+        paymentMode: {
+          type: String,
+        },
+        amount: {
+          type: Number,
+          default: 0,
+        },
+        transactionId: {
+          type: String,
+          default: null,
+        },
+        remarks: {
+          type: String,
+          default: null,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
 
     notes: {
       type: String,
@@ -185,6 +163,11 @@ const InvoiceSchema = new Schema(
       type: String,
       enum: ["GENERATED", "SENDED"],
       default: "GENERATED",
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["PENDING", "PAID"],
+      default: "PENDING",
     },
   },
   {
