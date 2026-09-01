@@ -13,6 +13,7 @@ import { generateEmployeePayroll } from "./services/payroll.service";
 import { defaultDeduction } from "./shared/helpers/defaultDeduction";
 import { processCompanyDailyAttendance } from "./services/companyAttendance.service";
 import { processAutoCloseAttendance } from "./services/autoCloseAttendance.service";
+import { generatePreviousMonthInvoice } from "./services/invoice.service";
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.get("/", (_req, res) => {
 
 app.use(errorMiddleware);
 
+// generatePreviousMonthInvoice({year:2026,month: 8})
 // createDailyAttendance();
 // processCompanyDailyAttendance({companyId:"6a312d0ca1023683916a1eaf", attendanceDate: new Date() });
 // processAutoCloseAttendance({companyId:"6a312d0ca1023683916a1eaf", attendanceDate: new Date() });

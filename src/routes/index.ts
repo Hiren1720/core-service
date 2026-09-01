@@ -2,6 +2,7 @@ import { Router } from "express";
 import AdminAuthRoutes from "./admin/auth.routes.js";
 import AdminProfileRoutes from "./admin/profile.routes.js";
 import AdminCompanyRoutes from "./admin/company.routes.js";
+import AdminInvoiceRoutes from "./admin/invoice.routes.js";
 import AdminBankAccountRoutes from "./admin/bankAccount.routes.js";
 
 import AuthRoutes from "./auth/auth.routes.js";
@@ -21,6 +22,8 @@ router.use("/admin/auth", AdminAuthRoutes);
 router.use("/admin/profile", AdminProfileRoutes);
 
 router.use("/admin/companies", AdminCompanyRoutes);
+
+router.use("/admin/invoices", AdminInvoiceRoutes);
 
 router.use("/admin/bank-accounts", AdminBankAccountRoutes);
 

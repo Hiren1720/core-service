@@ -21,7 +21,6 @@ export const attendanceQueue = new Queue("attendance", {
   },
 });
 
-
 attendanceQueue.on("error", (error) => {
   console.error("Attendance queue error:", error);
 });

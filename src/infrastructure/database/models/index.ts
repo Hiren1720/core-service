@@ -7,8 +7,10 @@ import { DeductionModel } from "./deduction.model.js";
 import { DepartmentModel } from "./department.model.js";
 import { DesignationModel } from "./designation.model.js";
 import { HolidayModel } from "./holiday.model.js";
+import { InvoiceModel } from "./invoice.model.js";
 import { LeaveModel } from "./leave.model.js";
 import { LeaveRequestModel } from "./leaveRequest.model.js";
+import { MonthlyEmployeeSnapshotModel } from "./monthlyEmployeeSnapshot.model.js";
 import { OfficeExpenseModel } from "./officeExpense.model.js";
 import { OtpModel } from "./otp.model.js";
 import { PayrollModel } from "./payroll.model.js";
@@ -38,8 +40,10 @@ export {
   DepartmentModel,
   DesignationModel,
   HolidayModel,
+  InvoiceModel,
   LeaveModel,
   LeaveRequestModel,
+  MonthlyEmployeeSnapshotModel,
   OfficeExpenseModel,
   OtpModel,
   PayrollModel,
