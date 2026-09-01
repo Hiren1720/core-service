@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../../shared/response/api-response";
 import { InvoiceModel } from "../../../infrastructure/database/models";
+import { Types } from "mongoose";
 
 export const invoicePayments = async (
   req: Request,
@@ -71,16 +72,6 @@ export const invoicePayments = async (
 
       {
         $addFields: {
-          calculatedPaymentStatus: {
-            $cond: [
-              {
-                $gte: ["$paidAmount", "$totalAmount"],
-              },
-              "PAID",
-              "PENDING",
-            ],
-          },
-
           pendingAmount: {
             $max: [
               {
@@ -135,7 +126,7 @@ export const invoicePayments = async (
               status: 1,
               totalAmount: 1,
               payments: 1,
-
+              paymentStatus: 1,
               paidAmount: 1,
               pendingAmount: 1,
               calculatedPaymentStatus: 1,
@@ -219,6 +210,163 @@ export const invoicePayments = async (
           stats,
         },
         "Invoice fetched",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addInvoicePayment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { invoiceId } = req.params;
+
+    const { paymentMode, amount, transactionId, remarks, date } = req.body;
+
+    /*
+     * -------------------------------------------------------
+     * Validate invoice ID
+     * -------------------------------------------------------
+     */
+
+    if (!Types.ObjectId.isValid(invoiceId as string)) {
+      return res.status(400).json(ApiResponse.error("Invalid invoice ID"));
+    }
+
+    /*
+     * -------------------------------------------------------
+     * Validate amount
+     * -------------------------------------------------------
+     */
+
+    const paymentAmount = Number(amount);
+
+    if (!paymentAmount || paymentAmount <= 0) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Valid payment amount is required"));
+    }
+
+    /*
+     * -------------------------------------------------------
+     * Find invoice
+     * -------------------------------------------------------
+     */
+
+    const invoice = await InvoiceModel.findById(invoiceId);
+
+    if (!invoice) {
+      return res.status(404).json(ApiResponse.error("Invoice not found"));
+    }
+
+    /*
+     * -------------------------------------------------------
+     * Calculate already received amount
+     * -------------------------------------------------------
+     */
+
+    const receivedAmount = (invoice.payments || []).reduce(
+      (total, payment) => total + Number(payment.amount || 0),
+      0,
+    );
+
+    /*
+     * -------------------------------------------------------
+     * Check if invoice is already fully paid
+     * -------------------------------------------------------
+     */
+
+    if (receivedAmount >= invoice.totalAmount) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Invoice is already fully paid"));
+    }
+
+    /*
+     * -------------------------------------------------------
+     * Remaining amount
+     * -------------------------------------------------------
+     */
+
+    const pendingAmount = invoice.totalAmount - receivedAmount;
+
+    /*
+     * Don't allow payment greater than pending amount.
+     *
+     * Example:
+     *
+     * Invoice = ₹10,000
+     * Received = ₹7,000
+     * Pending = ₹3,000
+     *
+     * Admin cannot add ₹4,000.
+     */
+
+    if (paymentAmount > pendingAmount) {
+      return res
+        .status(400)
+        .json(
+          ApiResponse.error(
+            `Payment amount cannot exceed pending amount of ${pendingAmount}`,
+          ),
+        );
+    }
+
+    /*
+     * -------------------------------------------------------
+     * Add payment
+     * -------------------------------------------------------
+     */
+
+    invoice.payments.push({
+      paymentMode,
+      amount: paymentAmount,
+      transactionId: transactionId || null,
+      remarks: remarks || null,
+      date: date ? new Date(date) : new Date(),
+    });
+
+    /*
+     * -------------------------------------------------------
+     * Calculate new received amount
+     * -------------------------------------------------------
+     */
+
+    const newReceivedAmount = receivedAmount + paymentAmount;
+
+    /*
+     * -------------------------------------------------------
+     * Update payment status
+     * -------------------------------------------------------
+     */
+
+    invoice.paymentStatus =
+      newReceivedAmount >= invoice.totalAmount ? "PAID" : "PENDING";
+
+    await invoice.save();
+
+    /*
+     * -------------------------------------------------------
+     * Response
+     * -------------------------------------------------------
+     */
+
+    return res.status(200).json(
+      ApiResponse.success(
+        {
+          invoiceId: invoice._id,
+          invoiceNumber: invoice.invoiceNumber,
+          totalAmount: invoice.totalAmount,
+          paidAmount: newReceivedAmount,
+          pendingAmount: Math.max(invoice.totalAmount - newReceivedAmount, 0),
+          paymentStatus: invoice.paymentStatus,
+          payments: invoice.payments,
+        },
+        "Payment added successfully",
       ),
     );
   } catch (error) {

@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware.js";
-import { invoicePayments } from "../../controllers/admin/payments/payments.controller.js";
+import { addInvoicePayment, invoicePayments } from "../../controllers/admin/payments/payments.controller.js";
 
 const router = Router();
 
@@ -11,4 +11,9 @@ router.get(
     invoicePayments
 );
 
+router.post(
+    "/add/:invoiceId",
+    // authenticateAdmin,
+    addInvoicePayment
+)
 export default router;
