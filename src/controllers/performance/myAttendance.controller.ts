@@ -75,6 +75,7 @@ export const punchOut = async (
       method,
       session,
       null,
+      false
     );
 
     await session.commitTransaction();
@@ -167,7 +168,7 @@ export const manualPunch = async (
       date: manual.date,
       inTime: manual.inTime,
       outTime: manual.outTime,
-    });
+    }, false);
     if (attendanceOut && manual.outTime) {
       attendanceOut.manualPunchOutBy = new mongoose.Types.ObjectId(id);
       attendanceOut.isManualPunchOut = true;

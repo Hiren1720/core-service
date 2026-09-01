@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 import { getRedisConnection } from "../../../config/redis.config";
-import { processCompanyDailyAttendance } from "../../../services/companyAttendace.service";
+import { processCompanyDailyAttendance } from "../../../services/companyAttendance.service";
+import { processAutoCloseAttendance } from "../../../services/autoCloseAttendance.service";
 
 export const attendanceWorker = new Worker(
   "attendance",
@@ -9,16 +10,19 @@ export const attendanceWorker = new Worker(
       case "createCompanyDailyAttendance":
         await processCompanyDailyAttendance({
           companyId: job.data.companyId,
-          attendanceDate: new Date(
-            job.data.attendanceDate,
-          ),
+          attendanceDate: new Date(job.data.attendanceDate),
+        });
+        break;
+
+      case "autoCloseAttendance":
+        await processAutoCloseAttendance({
+          companyId: job.data.companyId,
+          attendanceDate: new Date(job.data.attendanceDate),
         });
         break;
 
       default:
-        throw new Error(
-          `Unknown attendance job: ${job.name}`,
-        );
+        throw new Error(`Unknown attendance job: ${job.name}`);
     }
   },
   {
@@ -36,8 +40,5 @@ attendanceWorker.on("failed", (job, error) => {
 });
 
 attendanceWorker.on("error", (error) => {
-  console.error(
-    "Attendance worker error:",
-    error,
-  );
+  console.error("Attendance worker error:", error);
 });

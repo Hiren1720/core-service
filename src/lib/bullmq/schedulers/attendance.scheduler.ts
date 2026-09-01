@@ -27,3 +27,28 @@ export const registerAttendanceScheduler = async () => {
 
   console.log(`Attendance jobs queued for ${companies.length} companies`);
 };
+
+export const registerAttendanceAutoCloseScheduler = async () => {
+  const today = normalizeDate(new Date());
+
+  const companies = await CompanyModel.find({
+    status: status.ACTIVE,
+  })
+    .select("_id")
+    .lean();
+
+  for (const company of companies) {
+    await attendanceQueue.add(
+      "autoCloseAttendance",
+      {
+        companyId: company._id.toString(),
+        attendanceDate: today.toISOString(),
+      },
+      {
+        jobId: `auto-close-${company._id}-${today.toISOString()}`,
+      },
+    );
+  }
+
+  console.log(`Auto-close jobs queued for ${companies.length} companies`);
+};

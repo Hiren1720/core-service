@@ -229,8 +229,8 @@ export const PunchOutFn = async (
     longitude: number;
     address: string;
   } | null,
-  method: "MOBILE" | "WEB" | "BIOMETRIC" = "MOBILE",
-  session: mongoose.ClientSession,
+  method: "MOBILE" | "WEB" | "BIOMETRIC" | "SYSTEM" = "MOBILE",
+  session: mongoose.ClientSession | null,
   manual:
     | {
         date: string;
@@ -239,14 +239,10 @@ export const PunchOutFn = async (
       }
     | null
     | undefined,
+  isAutoClose: boolean,
 ) => {
   const now = new Date();
-
   const attendanceDate = normalizeDate(manual?.date ?? now);
-
-  const outTime = manual?.outTime
-    ? buildDateTime(attendanceDate, manual.outTime)
-    : now;
 
   // Get attendance, shift and policy
   const [attendance, userShift, userPolicy] = await Promise.all([
@@ -264,12 +260,15 @@ export const PunchOutFn = async (
       $or: [
         // Previous years
         {
-          effectiveFromYear: { $lt: new Date().getFullYear() },
+          effectiveFromYear: {
+            $lt: attendanceDate.getFullYear(),
+          },
         },
-        // Same year, requested month or earlier
         {
-          effectiveFromYear: new Date().getFullYear(), // currunt year
-          effectiveFromMonth: { $lte: new Date().getMonth() + 1 }, // currunt month
+          effectiveFromYear: attendanceDate.getFullYear(),
+          effectiveFromMonth: {
+            $lte: attendanceDate.getMonth() + 1,
+          },
         },
       ],
     })
@@ -285,7 +284,7 @@ export const PunchOutFn = async (
   const policy: any = userPolicy?.policyId;
 
   if (!attendance) {
-    throw new Error("Attendance not generated for today");
+    throw new Error("Attendance not generated for this date");
   }
 
   if (!shift) {
@@ -300,6 +299,8 @@ export const PunchOutFn = async (
     throw new Error("Punch-in time is missing");
   }
 
+  // Prevent duplicate punch-out.
+  // Manual update is allowed to replace the existing value.
   if (attendance.outTime && !manual) {
     throw new Error("Already punched out");
   }
@@ -310,6 +311,12 @@ export const PunchOutFn = async (
   const shiftStart = buildDateTime(attendanceDate, shift.startTime);
 
   const shiftEnd = buildDateTime(attendanceDate, shift.endTime);
+
+  // Handle overnight shift.
+  if (shiftEnd <= shiftStart) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+
   // ========================================================
   // Shift duration
   // ========================================================
@@ -357,8 +364,13 @@ export const PunchOutFn = async (
 
       const halfShiftMinutes = Math.floor(shiftDurationMinutes / 2);
 
+      // FIRST_HALF leave
+      // Employee works second half.
+      //
+      // 09:00 - 18:00
+      // Working: 13:30 - 18:00
+
       if (leaveRequest.duration === "FIRST_HALF") {
-        // Employee works second half
         applicableStart = new Date(shiftStart);
 
         applicableStart.setMinutes(
@@ -368,8 +380,13 @@ export const PunchOutFn = async (
         applicableEnd = new Date(shiftEnd);
       }
 
+      // SECOND_HALF leave
+      // Employee works first half.
+      //
+      // 09:00 - 18:00
+      // Working: 09:00 - 13:30
+
       if (leaveRequest.duration === "SECOND_HALF") {
-        // Employee works first half
         applicableStart = new Date(shiftStart);
 
         applicableEnd = new Date(shiftStart);
@@ -379,8 +396,19 @@ export const PunchOutFn = async (
     }
   }
 
+  //out time
+  let outTime: Date;
+
+  if (manual?.outTime) {
+    outTime = buildDateTime(attendanceDate, manual.outTime);
+  } else if (isAutoClose) {
+    outTime = applicableEnd;
+  } else {
+    outTime = now;
+  }
+
   // ========================================================
-  // Save punch-out information
+  // Save punch-out
   // ========================================================
 
   attendance.outTime = outTime;
@@ -393,43 +421,21 @@ export const PunchOutFn = async (
 
   const workedMinutes = Math.max(
     0,
-    Math.floor(
-      (attendance.outTime.getTime() - attendance.inTime.getTime()) / 60000,
-    ),
+    Math.floor((outTime.getTime() - attendance.inTime.getTime()) / 60000),
   );
 
   attendance.totalWorkedMinutes = workedMinutes;
 
   // ========================================================
-  // Late login
-  //
-  // Compare against applicable working start.
-  // ========================================================
-
-  const lateMinutes = Math.max(
-    0,
-    Math.floor(
-      (attendance.inTime.getTime() - applicableStart.getTime()) / 60000,
-    ),
-  );
-
-  attendance.lateMinutes = lateMinutes;
-
-  if (lateMinutes > policy.lateRule.allowedLateMinutes) {
-    attendance.isLate = true;
-  }
-
-  // ========================================================
   // Early logout
   //
-  // Compare against applicable working end.
+  // Punch-out only handles early logout.
+  // Late login is already calculated during punch-in.
   // ========================================================
 
   const earlyExitMinutes = Math.max(
     0,
-    Math.floor(
-      (applicableEnd.getTime() - attendance.outTime.getTime()) / 60000,
-    ),
+    Math.floor((applicableEnd.getTime() - outTime.getTime()) / 60000),
   );
 
   attendance.earlyExitMinutes = earlyExitMinutes;
@@ -441,22 +447,19 @@ export const PunchOutFn = async (
   // ========================================================
   // Overtime
   //
-  // Only normal/full-day attendance can generate overtime.
-  // Half-day leave should not generate overtime.
+  // Half-day leave cannot generate overtime.
   // ========================================================
 
   if (!halfDayLeave) {
     const overtimeEnabled = policy?.overtime?.enabled === true;
+
     const overtimeMinimumMinutes = policy?.overtime?.minimumMinutes ?? 0;
 
     if (overtimeEnabled && workedMinutes > shiftDurationMinutes) {
       const extraMinutes = workedMinutes - shiftDurationMinutes;
 
-      if (extraMinutes >= overtimeMinimumMinutes) {
-        attendance.overtimeMinutes = extraMinutes;
-      } else {
-        attendance.overtimeMinutes = 0;
-      }
+      attendance.overtimeMinutes =
+        extraMinutes >= overtimeMinimumMinutes ? extraMinutes : 0;
     } else {
       attendance.overtimeMinutes = 0;
     }
@@ -468,20 +471,18 @@ export const PunchOutFn = async (
   // Attendance status
   // ========================================================
 
-  // --------------------------------------------------------
-  // HALF-DAY LEAVE
-  //
-  // isHalfDay = true
-  // leaveRequestId exists
-  //
-  // Here we only decide whether the worked half is
-  // PRESENT or ABSENT.
-  //
-  // We DO NOT run normal half-day attendance rules.
-  // --------------------------------------------------------
   const fullDayMinimumMinutes = Math.ceil(
     (shiftDurationMinutes * policy.lateRule.minFullDayPercentage) / 100,
   );
+
+  // ========================================================
+  // Half-day leave
+  //
+  // Do not apply normal attendance half-day rules.
+  //
+  // The employee only needs to complete the
+  // required working half.
+  // ========================================================
 
   if (halfDayLeave) {
     const requiredHalfDayMinutes = Math.ceil(fullDayMinimumMinutes / 2);
@@ -492,33 +493,34 @@ export const PunchOutFn = async (
       attendance.attendanceStatus = attendanceType.ABSENT;
     }
 
-    // Keep true because this represents half-day leave
+    // Keep true because this represents
+    // half-day leave.
     attendance.isHalfDay = true;
   }
 
-  // --------------------------------------------------------
-  // NORMAL FULL-DAY ATTENDANCE
-  // --------------------------------------------------------
+  // ========================================================
+  // Normal attendance
+  // ========================================================
   else {
     const halfDayMinimumMinutes = Math.ceil(
       (shiftDurationMinutes * policy.lateRule.minHalfDayPercentage) / 100,
     );
 
-    // Less than minimum half-day requirement
+    // Less than minimum half-day
     if (workedMinutes < halfDayMinimumMinutes) {
       attendance.attendanceStatus = attendanceType.ABSENT;
 
       attendance.isHalfDay = false;
     }
 
-    // Worked half day but not full day
+    // Half day attendance
     else if (workedMinutes < fullDayMinimumMinutes) {
       attendance.attendanceStatus = attendanceType.PRESENT;
 
       attendance.isHalfDay = true;
     }
 
-    // Full day
+    // Full day attendance
     else {
       attendance.attendanceStatus = attendanceType.PRESENT;
 
@@ -526,7 +528,15 @@ export const PunchOutFn = async (
     }
   }
 
-  await attendance.save({ session });
+  // System auto-close
+  if (isAutoClose) {
+    attendance.outMethod = "SYSTEM";
+    attendance.autoClosedAt = new Date();
+  }
+
+  await attendance.save({
+    session,
+  });
 
   return attendance;
 };

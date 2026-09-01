@@ -44,13 +44,13 @@ const AttendanceSchema = new Schema(
 
     inMethod: {
       type: String,
-      enum: ["MOBILE", "WEB", "BIOMETRIC", "QR"],
+      enum: ["MOBILE", "WEB", "BIOMETRIC"],
       default: "MOBILE",
     },
 
     outMethod: {
       type: String,
-      enum: ["MOBILE", "WEB", "BIOMETRIC", "QR"],
+      enum: ["MOBILE", "WEB", "BIOMETRIC", "SYSTEM"],
       default: null,
     },
 
@@ -101,6 +101,10 @@ const AttendanceSchema = new Schema(
     autoClosed: {
       type: Boolean,
       default: false,
+    },
+    autoClosedAt: {
+      type: Date,
+      default: null,
     },
 
     //manual punch
