@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../../shared/response/api-response";
 import {
+  AdminModel,
   InvoiceModel,
   MonthlyEmployeeSnapshotModel,
 } from "../../../infrastructure/database/models";
@@ -175,9 +176,16 @@ export const getInvoiceDetails = async (
       return res.status(404).json(ApiResponse.error("Invoice not found"));
     }
 
+    const admin = await AdminModel.findOne().lean().select("company");
+
     return res
       .status(200)
-      .json(ApiResponse.success(invoice, "Invoice details fetched"));
+      .json(
+        ApiResponse.success(
+          { invoice, admin: admin?.company },
+          "Invoice details fetched",
+        ),
+      );
   } catch (error) {
     next(error);
   }
