@@ -7,13 +7,13 @@ const router = Router();
 
 router.get(
     "/list",
-    // authenticateAdmin,
+    authenticateAdmin,
     invoicePayments
 );
 
 router.post(
     "/add/:invoiceId",
-    // authenticateAdmin,
+    authenticateAdmin,
     addInvoicePayment
 )
 export default router;

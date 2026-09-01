@@ -405,6 +405,7 @@ export const getLeavesApplications = async (
 
     const leaveRequestQuery = LeaveRequestModel.find(filter)
       .populate("userId", "firstName lastName profileImage role")
+      .populate("leaveId", "name")
       .sort({
         createdAt: -1,
       })

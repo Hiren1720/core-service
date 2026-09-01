@@ -24,7 +24,7 @@ export const generatePreviousMonthInvoice = async ({
   const companies = await CompanyModel.find({
     status: status.ACTIVE,
   })
-    .select("_id")
+    .select("_id employeePrice")
     .lean();
 
   console.log(
@@ -89,7 +89,7 @@ export const generatePreviousMonthInvoice = async ({
        * employees, we can add that separately.
        */
       for (const period of employee.activePeriods || []) {
-        console.log("period", period);
+       
         if (!period.from || !period.to) {
           continue;
         }
@@ -107,7 +107,7 @@ export const generatePreviousMonthInvoice = async ({
          * For now this assumes the rate comes from
          * employee.monthlyRate.
          */
-        const employeeRate = Number(200);
+        const employeeRate = Number(company.employeePrice || 0);
 
         if (!employeeRate || days <= 0) {
           continue;

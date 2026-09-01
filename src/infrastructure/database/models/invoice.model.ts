@@ -83,27 +83,6 @@ const InvoiceSchema = new Schema(
       default: [],
     },
 
-    // Employee snapshot
-    totalEmployees: {
-      type: Number,
-      default: 0,
-    },
-
-    activeEmployees: {
-      type: Number,
-      default: 0,
-    },
-
-    inactiveEmployees: {
-      type: Number,
-      default: 0,
-    },
-
-    deletedEmployees: {
-      type: Number,
-      default: 0,
-    },
-
     // Billing calculation
     subtotal: {
       type: Number,
