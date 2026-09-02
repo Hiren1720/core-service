@@ -23,11 +23,10 @@ export const getMyLeavesBucket = async (
   next: NextFunction,
 ) => {
   try {
-    const { id: userId } = req.user!;
-    const { year } = req.query;
+    const { year, userId } = req.query;
 
     const list = await UserLeaveBalanceModel.find({
-      userId,
+      userId: String(userId),
       year: Number(year),
     })
       .populate("leaveId", "name isPaid")
