@@ -257,7 +257,7 @@ export const getEmployeeCount = async (
     const filter: any = {
       companyId: req.user!.companyId,
     };
-    
+
     if (branchId) filter.branchId = branchId;
     if (shiftId) filter.shiftId = shiftId;
     if (departmentId) filter.departmentId = departmentId;
@@ -437,8 +437,16 @@ export const updateEmployeeSalary = async (
   try {
     const { id } = req.user!;
 
-    const { userId, salary, effectiveFromMonth, effectiveFromYear, remarks } =
-      req.body;
+    const {
+      userId,
+      salary,
+      effectiveFromMonth,
+      effectiveFromYear,
+      remarks,
+      allowPFDeduction,
+      allowESICDeduction,
+      payslipId,
+    } = req.body;
 
     if (!userId || !salary || !effectiveFromMonth || !effectiveFromYear) {
       throw new Error(
@@ -457,6 +465,12 @@ export const updateEmployeeSalary = async (
       // 2. Update existing record
       existingPayslip.salary = salary;
       if (remarks) existingPayslip.remarks = remarks;
+      if (allowPFDeduction !== undefined)
+        existingPayslip.allowPFDeduction = allowPFDeduction;
+      if (allowESICDeduction !== undefined)
+        existingPayslip.allowESICDeduction = allowESICDeduction;
+      if (payslipId) existingPayslip.payslipId = payslipId;
+
       existingPayslip.assignedBy = id as any;
 
       await existingPayslip.save();
@@ -486,17 +500,15 @@ export const updateEmployeeSalary = async (
       ],
     });
 
-    const existing = await UserPayslipModel.findOne({ userId }).lean();
-
     // 4. Create new salary record
     const newPayslip = await UserPayslipModel.create({
       salary,
       effectiveFromMonth,
       effectiveFromYear,
       assignedBy: id,
-      payslipId: existing?.payslipId,
-      allowESICDeduction: existing?.allowESICDeduction,
-      allowPFDeduction: existing?.allowPFDeduction,
+      payslipId: payslipId,
+      allowESICDeduction: allowESICDeduction,
+      allowPFDeduction: allowPFDeduction,
     });
 
     return res.status(201).json({
@@ -517,7 +529,7 @@ export const getEmployeeSalaryDetails = async (
   try {
     const userId = req.query.userId as string;
 
-    const [current, upcoming] = await Promise.all([
+    const [current, upcoming, history] = await Promise.all([
       UserPayslipModel.findOne({
         userId,
         $or: [
@@ -553,12 +565,15 @@ export const getEmployeeSalaryDetails = async (
           },
         ],
       }),
+      UserPayslipModel.find({
+        userId,
+      }),
     ]);
 
     return res.status(201).json({
       success: true,
       message: "Employee salary fetched successfully",
-      data: { current, upcoming },
+      data: { current, upcoming, history },
     });
   } catch (error) {
     next(error);
