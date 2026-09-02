@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import {
   PayrollModel,
+  UserDetailModel,
   UserModel,
   UserPayslipModel,
 } from "../../infrastructure/database/models";
@@ -143,6 +144,10 @@ export const getEmployeeWiseYearlyPayrolls = async (
     const user = await UserModel.findById(userId)
       .lean()
       .populate("branchId", "name")
+      .populate(
+        "companyId",
+        "companyLogo companyName gstin companyEmail companyPhone companyAddress",
+      )
       .populate("shiftId", "name startTime endTime")
       .populate("departmentId", "name")
       .populate("designationId", "name")
@@ -178,11 +183,15 @@ export const getEmployeeWiseYearlyPayrolls = async (
         effectiveFromMonth: -1,
       })
       .select("salary");
-    
+
     const payrolls = await PayrollModel.find({
       payrollYear: requestedYear,
-      userId: userId.toString()
+      userId: userId.toString(),
     }).lean();
+
+    const userDetails = await UserDetailModel.findOne({
+      userId: userId.toString(),
+    }).select("documents bank");
 
     return res.status(200).json(
       ApiResponse.success({
@@ -190,6 +199,7 @@ export const getEmployeeWiseYearlyPayrolls = async (
         shifts: [user.shiftId],
         departments: [user?.departmentId],
         user,
+        userDetails,
         curruntSalary: payslip?.salary || 0,
         payrolls,
       }),
