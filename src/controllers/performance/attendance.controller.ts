@@ -174,3 +174,27 @@ export const getManualPunchList = async (
     next(error);
   }
 };
+
+export const rejectAttendance = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { attendanceId } = req.params;
+
+    const attendance = await AttendanceModel.findById(attendanceId);
+    if (!attendance) {
+      return res.status(404).json(ApiResponse.error("Attendance not found"));
+    }
+    await AttendanceModel.findByIdAndUpdate(attendanceId, {
+      $set: { attendanceStatus: attendanceType.REJECTED },
+    });
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Attendance rejected successfully"));
+  } catch (error) {
+    next(error);
+  }
+};

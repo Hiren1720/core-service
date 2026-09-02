@@ -4,6 +4,7 @@ import {
   getAttendanceByDate,
   getAttendanceCountByDate,
   getManualPunchList,
+  rejectAttendance,
 } from "../../controllers/performance/attendance.controller.js";
 import {
   getAttendanceByMonth,
@@ -13,6 +14,7 @@ import {
   punchIn,
   punchOut,
 } from "../../controllers/performance/myAttendance.controller.js";
+import { authorize } from "../../middleware/authorize.middleware.js";
 
 const router = Router();
 
@@ -33,5 +35,12 @@ router.get("/my/monthly/count", authenticateUser, getAttendanceCountByMonth);
 router.get("/daily", authenticateUser, getAttendanceByDate);
 
 router.get("/daily/count", authenticateUser, getAttendanceCountByDate);
+
+router.put(
+  "/punch/reject/:attendanceId",
+  authenticateUser,
+  authorize("MANAGER", "OWNER"),
+  rejectAttendance,
+);
 
 export default router;
