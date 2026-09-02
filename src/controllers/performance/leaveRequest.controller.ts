@@ -347,7 +347,7 @@ export const updateLeaveApplicationStatus = async (
           userId: leaveRequest.userId.toString(),
           field: "leaveApplicationStatus",
           fieldValue: status,
-          fieldId: leaveBalance._id.toString(),
+          fieldId: leaveRequest._id.toString(),
           remarks,
           assignedBy: req.user!.id,
         },
