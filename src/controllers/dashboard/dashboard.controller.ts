@@ -20,6 +20,7 @@ import {
 } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
+import mongoose from "mongoose";
 
 export const workforceOverview = async (
   req: Request,
@@ -27,7 +28,15 @@ export const workforceOverview = async (
   next: NextFunction,
 ) => {
   try {
-    const companyId = req.user!.companyId;
+    const { role } = req.user!;
+    
+    let companyId;
+    if (role === "ADMIN") {
+      companyId = new mongoose.Types.ObjectId(req.query.companyId as string);
+    } else {
+      companyId = req.user!.companyId;
+    }
+
     const filter: any = {
       companyId,
     };

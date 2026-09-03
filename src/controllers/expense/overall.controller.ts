@@ -14,20 +14,29 @@ export const getOverallExpensesCount = async (
   next: NextFunction,
 ) => {
   try {
+    const { role } = req.user!;
+
+    let companyId;
+    if (role === "ADMIN") {
+      companyId = new mongoose.Types.ObjectId(req.query.companyId as string);
+    } else {
+      companyId = new mongoose.Types.ObjectId(req.user!.companyId);
+    }
+
     const currentFilter: any = {
-      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+      companyId,
     };
 
     const pastFilter: any = {
-      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+      companyId
     };
 
     const curruntPayrollFilter: any = {
-      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+      companyId
     };
 
     const pastPayrollFilter: any = {
-      companyId: new mongoose.Types.ObjectId(req.user!.companyId),
+      companyId
     };
 
     const month = req.query.month ? Number(req.query.month) : undefined;
@@ -64,7 +73,6 @@ export const getOverallExpensesCount = async (
       curruntPayrollFilter.payrollYear = Number(startDate.split("-")[0]);
       pastPayrollFilter.payrollMonth = Number(endDate.split("-")[1]);
       pastPayrollFilter.payrollYear = Number(endDate.split("-")[0]);
-  
     } else if (year && month) {
       // Current Month
       currentFilter.date = {
@@ -114,7 +122,10 @@ export const getOverallExpensesCount = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
+                $subtract: [
+                  "$totals.attendanceSalaryAmount",
+                  "$totals.deductionsAmount",
+                ],
               },
             },
           },
@@ -135,7 +146,10 @@ export const getOverallExpensesCount = async (
             _id: null,
             totalAmount: {
               $sum: {
-                $subtract: ["$totals.attendanceSalaryAmount", "$totals.deductionsAmount"],
+                $subtract: [
+                  "$totals.attendanceSalaryAmount",
+                  "$totals.deductionsAmount",
+                ],
               },
             },
           },
