@@ -12,6 +12,7 @@ import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
 import { generateUserUniqueUserId } from "../../../shared/helpers/generateUserId.js";
+import { addUserHistory } from "../../../shared/services/userHistory.service.js";
 
 export const createCompany = async (
   req: Request,
@@ -147,6 +148,17 @@ export const createCompany = async (
       session,
     );
 
+    await addUserHistory(
+      {
+        userId: userDetails._id.toString(),
+        field: "userStatus",
+        fieldId: userDetails._id.toString(),
+        fieldValue: userDetails.status,
+        remarks: "New added",
+        assignedBy: "",
+      },
+      session,
+    );
     await userDetails.save({ session });
 
     const html = renderEmailTemplate("onboarding", {
@@ -459,6 +471,7 @@ export const getCompanies = async (
               firstName: 1,
               lastName: 1,
               profileImage: 1,
+              status: 1,
             },
 
             userStats: 1,
