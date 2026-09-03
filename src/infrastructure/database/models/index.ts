@@ -22,6 +22,7 @@ import { ResignationModel } from "./resignation.model.js";
 import { ShiftModel } from "./shift.model.js";
 import { TerminationModel } from "./termination.model.js";
 import { UserModel } from "./user.model.js";
+import { UserCounterModel } from "./userCounter.model.js";
 import { UserAssignmentModel } from "./userAssignment.model.js";
 import { UserDetailModel } from "./userDetail.model.js";
 import { UserHistoryModel } from "./userHistory.model.js";
@@ -55,6 +56,7 @@ export {
   ShiftModel,
   TerminationModel,
   UserAssignmentModel,
+  UserCounterModel,
   UserModel,
   UserDetailModel,
   UserHistoryModel,

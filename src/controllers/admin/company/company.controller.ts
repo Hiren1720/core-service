@@ -9,6 +9,9 @@ import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
 import { status } from "../../../types/types.js";
 import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
+import { renderEmailTemplate } from "../../../shared/templates/index.js";
+import { sendMail } from "../../../shared/services/mail.service.js";
+import { generateUserUniqueUserId } from "../../../shared/helpers/generateUserId.js";
 
 export const createCompany = async (
   req: Request,
@@ -46,15 +49,14 @@ export const createCompany = async (
         ? modules.split(",").map((item: string) => item.trim())
         : modules || [];
 
-    const existingCompany = await CompanyModel.findOne({
-      companyEmail,
-    }).session(session);
+    // const existingCompany = await CompanyModel.findOne({
+    //   companyEmail,
+    // }).session(session);
 
-    if (existingCompany) {
-      await session.abortTransaction();
-
-      return res.status(400).json(ApiResponse.error("Company already exists"));
-    }
+    // if (existingCompany) {
+    //   await session.abortTransaction();
+    //   return res.status(400).json(ApiResponse.error("Company already exists"));
+    // }
 
     const existingUser = await UserModel.findOne({
       email: email,
@@ -134,19 +136,39 @@ export const createCompany = async (
       });
     }
 
-    await user.save({ session });
+    const userDetails = await user.save({ session });
 
-    await company.save({
+    const companyDetails = await company.save({
       session,
     });
 
+    userDetails.userId = await generateUserUniqueUserId(
+      companyDetails._id.toString(),
+      session,
+    );
+
+    await userDetails.save({ session });
+
+    const html = renderEmailTemplate("onboarding", {
+      companyName: "IEKA",
+      userName: firstName + " " + lastName,
+      userId: userDetails.userId,
+      password: password,
+    });
+
+    await sendMail({
+      to: user.email,
+      subject: `Welcome to IEKA - Your Account Details`,
+      html,
+    });
+
     await session.commitTransaction();
-    await defaultDeduction(company._id.toString()); // add default deduction company wise
+    await defaultDeduction(companyDetails._id.toString()); // add default deduction company wise
 
     return res.status(201).json(
       ApiResponse.success(
         {
-          companyId: company._id,
+          companyId: companyDetails._id,
           representativeId: user._id,
         },
         "Company created successfully",
