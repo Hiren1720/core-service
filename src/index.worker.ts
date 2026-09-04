@@ -7,8 +7,8 @@ async function startWorkers() {
     await connectMongo();
     console.log("✅ MongoDB Connected");
 
-    const attendanceWorkerPath = "./lib/bullmq/workers/attendance.worker";
-    const invoiceWorkerPath = "./lib/bullmq/workers/invoice.worker";
+    const attendanceWorkerPath = "./lib/bullmq/workers/attendance.worker.js";
+    const invoiceWorkerPath = "./lib/bullmq/workers/invoice.worker.js";
     await import(attendanceWorkerPath);
     await import(invoiceWorkerPath);
 
