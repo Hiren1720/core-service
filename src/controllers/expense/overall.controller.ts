@@ -28,15 +28,15 @@ export const getOverallExpensesCount = async (
     };
 
     const pastFilter: any = {
-      companyId
+      companyId,
     };
 
     const curruntPayrollFilter: any = {
-      companyId
+      companyId,
     };
 
     const pastPayrollFilter: any = {
-      companyId
+      companyId,
     };
 
     const month = req.query.month ? Number(req.query.month) : undefined;
@@ -163,7 +163,7 @@ export const getOverallExpensesCount = async (
           total:
             (reimbursement[0]?.totalAmount || 0) +
             (officeExpense[0]?.totalAmount || 0) +
-            (salary[0]?.totalAmount || 0),
+            (role === "ADMIN" ? 0 : salary[0]?.totalAmount || 0),
           reimbursement: reimbursement[0]?.totalAmount || 0,
           officeExpense: officeExpense[0]?.totalAmount || 0,
           salary: salary[0]?.totalAmount || 0,
