@@ -251,7 +251,7 @@ export const getProfileCardDetails = async (
       .populate("shiftId", "name startTime endTime")
       .populate("departmentId", "name")
       .populate("designationId", "name")
-      .select("role profileImage firstName lastName");
+      .select("role profileImage firstName lastName userId");
 
     if (!user) {
       return res.status(404).json(ApiResponse.error("user not found"));

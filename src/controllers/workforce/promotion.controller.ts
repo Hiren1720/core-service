@@ -72,13 +72,6 @@ export const getPromotions = async (
       status: { $ne: promotionStatus.CANCEL },
     };
 
-    // if (search) {
-    //   filter.name = {
-    //     $regex: search,
-    //     $options: "i",
-    //   };
-    // }
-
     if (role === "EMPLOYEE") {
       filter.userId = id;
     } else if (role === "MANAGER") {
@@ -86,12 +79,58 @@ export const getPromotions = async (
       filter.userId = { $in: [...userIds, id] };
     }
 
+    if (search) {
+      const users = await UserModel.find({
+        companyId: req.user!.companyId,
+        $or: [
+          {
+            firstName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            lastName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+        ],
+      }).select("_id");
+
+      const searchUserIds = users.map((user) => user._id);
+
+      if (role === "EMPLOYEE") {
+        filter.userId = {
+          $in: searchUserIds.filter(
+            (userId) => userId.toString() === id.toString(),
+          ),
+        };
+      } else if (role === "MANAGER") {
+        const managedUserIds = await getMyManagedUserIdList(id);
+
+        const allowedUserIds = [...managedUserIds, id].map((id) =>
+          id.toString(),
+        );
+
+        filter.userId = {
+          $in: searchUserIds.filter((userId) =>
+            allowedUserIds.includes(userId.toString()),
+          ),
+        };
+      } else {
+        filter.userId = {
+          $in: searchUserIds,
+        };
+      }
+    }
+
     if (status) {
       filter.status = status;
     }
 
     const promotionQuery = PromotionModel.find(filter)
-      .populate("userId", "firstName lastName role profileImage")
+      .populate("userId", "firstName lastName role profileImage userId")
       .populate("designationId", "name")
       .sort({
         createdAt: -1,

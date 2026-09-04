@@ -214,7 +214,7 @@ export const getEmployeeList = async (
 
     const [employee, total] = await Promise.all([
       UserModel.find(filter)
-        .select("firstName lastName role profileImage status")
+        .select("firstName lastName role profileImage status userId")
         .populate("branchId", "name")
         .populate("shiftId", "name startTime endTime")
         .populate("designationId", "name")
@@ -385,7 +385,7 @@ export const myManagedEmployeeList = async (
 
     if (role === "OWNER") {
       const users = await UserModel.find(filter)
-        .select("firstName lastName role profileImage")
+        .select("firstName lastName role profileImage userId")
         .lean();
 
       return res
@@ -419,7 +419,7 @@ export const myManagedEmployeeList = async (
     };
 
     const users = await UserModel.find(managerFilter)
-      .select("firstName lastName role profileImage")
+      .select("firstName lastName role profileImage userId")
       .lean();
     return res
       .status(200)

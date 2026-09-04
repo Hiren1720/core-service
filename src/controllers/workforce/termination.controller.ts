@@ -73,18 +73,57 @@ export const getTerminations = async (
       status: { $ne: terminationStatus.CANCEL },
     };
 
-    // if (search) {
-    //   filter.name = {
-    //     $regex: search,
-    //     $options: "i",
-    //   };
-    // }
-
     if (role === "EMPLOYEE") {
       filter.userId = id;
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
       filter.userId = { $in: [...userIds, id] };
+    }
+
+    if (search) {
+      const users = await UserModel.find({
+        companyId: req.user!.companyId,
+        $or: [
+          {
+            firstName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            lastName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+        ],
+      }).select("_id");
+
+      const searchUserIds = users.map((user) => user._id);
+
+      if (role === "EMPLOYEE") {
+        filter.userId = {
+          $in: searchUserIds.filter(
+            (userId) => userId.toString() === id.toString(),
+          ),
+        };
+      } else if (role === "MANAGER") {
+        const managedUserIds = await getMyManagedUserIdList(id);
+
+        const allowedUserIds = [...managedUserIds, id].map((id) =>
+          id.toString(),
+        );
+
+        filter.userId = {
+          $in: searchUserIds.filter((userId) =>
+            allowedUserIds.includes(userId.toString()),
+          ),
+        };
+      } else {
+        filter.userId = {
+          $in: searchUserIds,
+        };
+      }
     }
 
     if (status) {
@@ -94,7 +133,7 @@ export const getTerminations = async (
     const terminationQuery = TerminationModel.find(filter)
       .populate({
         path: "userId",
-        select: "firstName lastName role profileImage departmentId",
+        select: "firstName lastName role profileImage departmentId userId",
         populate: {
           path: "departmentId",
           select: "name",

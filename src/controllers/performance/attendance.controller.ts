@@ -27,7 +27,7 @@ export const getAttendanceByDate = async (
 
     const [result, count] = await Promise.all([
       AttendanceModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role status")
+        .populate("userId", "firstName lastName profileImage role status userId")
         .populate([
           {
             path: "leaveRequestId",
@@ -151,7 +151,7 @@ export const getManualPunchList = async (
 
     const [list, count] = await Promise.all([
       AttendanceModel.find(filter)
-        .populate("userId", "firstName lastName role profileImage")
+        .populate("userId", "firstName lastName role profileImage userId")
         .select(
           "attendanceDate inTime outTime  attendanceStatus  totalWorkedMinutes  isManualPunchIn isManualPunchOut updatedAt",
         )

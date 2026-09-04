@@ -146,7 +146,7 @@ export const getReimbursements = async (
     }
 
     const reimbursementsQuery = ReimbursementModel.find(filter)
-      .populate("userId", "firstName lastName profileImage role")
+      .populate("userId", "firstName lastName profileImage role userId")
       .sort({
         createdAt: -1,
       })
@@ -285,7 +285,7 @@ export const getReimbursementById = async (
       _id: req.params.reimbursementId,
       companyId: req.user!.companyId,
     })
-      .populate("userId", "firstName lastName profileImage role")
+      .populate("userId", "firstName lastName profileImage role userId")
       .populate("branchId", "name");
 
     if (!reimbursement) {

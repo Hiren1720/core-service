@@ -269,7 +269,7 @@ export const getAttendanceByMonth = async (
 
     const [attendanceRecords, generatedDays] = await Promise.all([
       AttendanceModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role status")
+        .populate("userId", "firstName lastName profileImage role status userId")
         .populate([
           {
             path: "leaveRequestId",

@@ -403,7 +403,7 @@ export const getLeavesApplications = async (
     }
 
     const leaveRequestQuery = LeaveRequestModel.find(filter)
-      .populate("userId", "firstName lastName profileImage role")
+      .populate("userId", "firstName lastName profileImage role userId")
       .populate("leaveId", "name")
       .sort({
         createdAt: -1,
@@ -425,8 +425,7 @@ export const getLeavesApplications = async (
         duration: leave.duration,
         Status: leave.status,
         Reason: leave.reason,
-        StartDate: leave.startDate?.toLocaleDateString(),
-        EndDate: leave.endDate?.toLocaleDateString(),
+        Date: leave.startDate?.toLocaleDateString(),
         ApprovedAt: leave.approvedAt?.toLocaleDateString(),
       }));
 
@@ -495,7 +494,7 @@ export const getLeaveApplicationById = async (
     const leaveRequestId = req.params.leaveRequestId;
 
     const leaveRequest = await LeaveRequestModel.findById(leaveRequestId)
-      .populate("userId", "firstName lastName profileImage role")
+      .populate("userId", "firstName lastName profileImage role userId")
       .lean();
 
     if (!leaveRequest) {

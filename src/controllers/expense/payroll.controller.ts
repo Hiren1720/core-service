@@ -52,7 +52,7 @@ export const getPayrolls = async (
     }
 
     const payrollQ = PayrollModel.find(filter)
-      .populate("userId", "firstName lastName profileImage role")
+      .populate("userId", "firstName lastName profileImage role userId")
       .populate("reimbursements", "name date amount")
       .sort({
         createdAt: -1,
@@ -151,7 +151,7 @@ export const getEmployeeWiseYearlyPayrolls = async (
       .populate("shiftId", "name startTime endTime")
       .populate("departmentId", "name")
       .populate("designationId", "name")
-      .select("role profileImage firstName lastName");
+      .select("role profileImage firstName lastName userId");
 
     if (!user) {
       return res.status(404).json("User Not found");

@@ -18,6 +18,7 @@ import bcrypt from "bcrypt";
 import { status, userStatus } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { generateUserLeaveBalance } from "../../services/leave.service";
+import { generateUserUniqueUserId } from "../../shared/helpers/generateUserId";
 
 export const createEmployee = async (
   req: Request,
@@ -78,12 +79,14 @@ export const createEmployee = async (
       firstName.trim().toLowerCase() + "@" + new Date().getFullYear(); // Default password (should be changed by user)
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const uniqueId = await generateUserUniqueUserId(companyId, session);
     const [user] = await UserModel.create(
       [
         {
           companyId,
           firstName,
           lastName,
+          userId: uniqueId,
           email: email.toLowerCase(),
           phone,
           status: "PENDING" as userStatus,
@@ -295,7 +298,7 @@ export const getEmployeeList = async (
     const [employees, total] = await Promise.all([
       UserModel.find(filter)
         .select(
-          "profileImage firstName lastName email phone status createdAt role",
+          "profileImage firstName lastName email phone status createdAt role userId",
         )
         .sort({
           createdAt: -1,
@@ -744,6 +747,7 @@ export const getBranchShiftDepartmentList = async (
 
             "user._id": 1,
             "user.role": 1,
+            "user.userId": 1,
             "user.firstName": 1,
             "user.lastName": 1,
             "user.profileImage": 1,

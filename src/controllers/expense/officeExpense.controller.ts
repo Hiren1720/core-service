@@ -140,7 +140,7 @@ export const getOfficeExpenses = async (
     }
 
     const officeExpensesQuery = OfficeExpenseModel.find(filter)
-      .populate("assignedBy", "firstName lastName profileImage role")
+      .populate("assignedBy", "firstName lastName profileImage role userId")
       .populate("branchId", "name")
       .sort({
         createdAt: -1,
@@ -273,7 +273,7 @@ export const getOfficeExpenseById = async (
       _id: req.params.officeExpenseId,
       companyId: req.user!.companyId,
     })
-      .populate("assignedBy", "firstName lastName profileImage role")
+      .populate("assignedBy", "firstName lastName profileImage role userId")
       .populate("branchId", "name");
 
     if (!officeExpense) {
