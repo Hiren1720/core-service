@@ -389,6 +389,12 @@ export const getCompanies = async (
           },
         },
 
+        {
+          $unwind: {
+            path: "$companyRepresentative",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
         ...(status
           ? [
               {
