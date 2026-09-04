@@ -17,6 +17,7 @@ export const processCompanyDailyAttendance = async ({
   companyId: string;
   attendanceDate: Date;
 }) => {
+  console.log("called worker for attendance")
   const companyObjectId = new mongoose.Types.ObjectId(companyId);
   const date = normalizeDate(attendanceDate);
 
