@@ -99,7 +99,7 @@ export const getInvoiceList = async (
           populate: [
             {
               path: "companyRepresentative",
-              select: "firstName lastName profileImage",
+              select: "firstName lastName profileImage userId",
             },
             {
               path: "assignedBankAccount",
@@ -162,7 +162,7 @@ export const getInvoiceDetails = async (
         populate: [
           {
             path: "companyRepresentative",
-            select: "firstName lastName profileImage",
+            select: "firstName lastName profileImage userId",
           },
           {
             path: "assignedBankAccount",
