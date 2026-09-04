@@ -20,7 +20,7 @@ export const registerAttendanceScheduler = async () => {
         attendanceDate: today.toISOString(),
       },
       {
-        jobId: `attendance-${company._id}-${today.toISOString()}`,
+        jobId: `attendance-${company._id}-${today.toLocaleDateString('en-IN')}`,
       },
     );
   }
@@ -45,7 +45,7 @@ export const registerAttendanceAutoCloseScheduler = async () => {
         attendanceDate: today.toISOString(),
       },
       {
-        jobId: `auto-close-${company._id}-${today.toISOString()}`,
+        jobId: `auto-close-${company._id}-${today.toLocaleDateString('en-IN')}`,
       },
     );
   }

@@ -15,7 +15,7 @@ export const registerMonthlyInvoiceScheduler = async () => {
       month,
     },
     {
-      jobId: `monthly-${year}-${month}`,
+      jobId: `invoice-monthly-${year}-${month}`,
     },
   );
 
