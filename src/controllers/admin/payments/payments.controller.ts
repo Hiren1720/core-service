@@ -176,7 +176,6 @@ export const invoicePayments = async (
     const [result] = await InvoiceModel.aggregate(pipeline);
 
     const list = result?.list || [];
-
     const total = result?.total?.[0]?.count || 0;
 
     const stats = result?.stats?.[0] || {
@@ -193,14 +192,24 @@ export const invoicePayments = async (
      * aggregate() does not support Mongoose populate().
      */
 
-    const populatedList = await InvoiceModel.populate(list, {
-      path: "companyId",
-      select: "companyName companyAddress companyLogo companyRepresentative",
-      populate: {
-        path: "companyRepresentative",
-        select: "firstName lastName profileImage userId",
-      },
-    });
+    const [populatedList, pending, paid] = await Promise.all([
+      InvoiceModel.populate(list, {
+        path: "companyId",
+        select: "companyName companyAddress companyLogo companyRepresentative",
+        populate: {
+          path: "companyRepresentative",
+          select: "firstName lastName profileImage userId",
+        },
+      }),
+      InvoiceModel.countDocuments({ paymentStatus: "PENDING" }),
+      InvoiceModel.countDocuments({ paymentStatus: "PAID" }),
+    ]);
+
+    const counts = {
+      pending,
+      paid,
+      total: pending + paid,
+    };
 
     return res.status(200).json(
       ApiResponse.success(
@@ -208,6 +217,7 @@ export const invoicePayments = async (
           list: populatedList,
           total,
           stats,
+          counts,
         },
         "Invoice fetched",
       ),

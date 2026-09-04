@@ -90,7 +90,7 @@ export const getInvoiceList = async (
         : {}),
     };
 
-    const [list, total, amount] = await Promise.all([
+    const [list, total, amount, generated, sended] = await Promise.all([
       InvoiceModel.find(filter)
         .select("invoiceNumber status totalAmount")
         .populate({
@@ -127,6 +127,8 @@ export const getInvoiceList = async (
           },
         },
       ]),
+      InvoiceModel.countDocuments({ status: "GENERATED" }),
+      InvoiceModel.countDocuments({ status: "SENDED" }),
     ]);
 
     const stats = {
@@ -134,9 +136,18 @@ export const getInvoiceList = async (
       sended: amount.find((a) => a._id === "SENDED")?.totalAmount || 0,
       total: amount.reduce((acc, a) => acc + a.totalAmount, 0),
     };
+
+    const counts = {
+      generated,
+      sended,
+      total: generated + sended,
+    };
+
     return res
       .status(200)
-      .json(ApiResponse.success({ list, total, stats }, "Invoice fetched"));
+      .json(
+        ApiResponse.success({ list, total, stats, counts }, "Invoice fetched"),
+      );
   } catch (error) {
     next(error);
   }

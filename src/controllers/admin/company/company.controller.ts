@@ -372,10 +372,6 @@ export const getCompanies = async (
       };
     }
 
-    if (status) {
-      match.status = status;
-    }
-
     const [companies, totalResult] = await Promise.all([
       CompanyModel.aggregate([
         // Company filter
@@ -393,12 +389,15 @@ export const getCompanies = async (
           },
         },
 
-        {
-          $unwind: {
-            path: "$companyRepresentative",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
+        ...(status
+          ? [
+              {
+                $match: {
+                  "companyRepresentative.status": status,
+                },
+              },
+            ]
+          : []),
 
         // Users belonging to company
         {
@@ -467,7 +466,6 @@ export const getCompanies = async (
             companyName: 1,
             companyAddress: 1,
             companyLogo: 1,
-            status: 1,
             createdAt: 1,
 
             companyRepresentative: {
