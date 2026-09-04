@@ -24,10 +24,16 @@ export const login = async (
   next: NextFunction,
 ) => {
   try {
-    const { email, password, platform } = req.body;
+    const { loginId, password, platform } = req.body;
+
+    if (!loginId || !password) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("User ID/email and password are required"));
+    }
 
     const user = await UserModel.findOne({
-      email,
+      $or: [{ userId: loginId }, { email: loginId.toLowerCase() }],
       status: "ACTIVE" as userStatus,
     })
       .select("+password")
@@ -37,9 +43,9 @@ export const login = async (
       return res.status(400).json(ApiResponse.error("Invalid credentials"));
     }
 
-    if (user.role === "EMPLOYEE" && platform === "WEB") {
-      return res.status(403).json(ApiResponse.error("Forbidden"));
-    }
+    // if (user.role === "EMPLOYEE" && platform === "WEB") {
+    //   return res.status(403).json(ApiResponse.error("Forbidden"));
+    // }
 
     if (user.password) {
       const isValid = await bcrypt.compare(password, user.password);
