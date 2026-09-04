@@ -40,7 +40,7 @@ export const getCompanyEmployeeStatusHistory = async (
         )
         .populate({
           path: "userId",
-          select: "firstName lastName profileImage role status ",
+          select: "firstName lastName profileImage role status userId",
         })
         .skip(skip)
         .limit(limit)

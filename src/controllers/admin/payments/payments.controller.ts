@@ -198,7 +198,7 @@ export const invoicePayments = async (
       select: "companyName companyAddress companyLogo companyRepresentative",
       populate: {
         path: "companyRepresentative",
-        select: "firstName lastName profileImage",
+        select: "firstName lastName profileImage userId",
       },
     });
 

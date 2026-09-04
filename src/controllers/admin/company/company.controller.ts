@@ -28,6 +28,7 @@ export const createCompany = async (
       companyName,
       gstin,
       companyEmail,
+      invoiceEmail,
       companyPhone,
       companyAddress,
 
@@ -77,6 +78,7 @@ export const createCompany = async (
           companyName,
           gstin,
           companyEmail,
+          invoiceEmail,
           companyPhone,
           companyAddress,
           assignedBankAccount,
@@ -222,6 +224,7 @@ export const updateCompany = async (
       companyName,
       gstin,
       companyEmail,
+      invoiceEmail,
       companyPhone,
       companyAddress,
       assignedBankAccount,
@@ -245,6 +248,7 @@ export const updateCompany = async (
     if (gstin !== undefined) company.gstin = gstin;
 
     if (companyEmail !== undefined) company.companyEmail = companyEmail;
+    if (invoiceEmail !== undefined) company.invoiceEmail = invoiceEmail;
 
     if (companyPhone !== undefined) company.companyPhone = companyPhone;
 
@@ -472,6 +476,7 @@ export const getCompanies = async (
               lastName: 1,
               profileImage: 1,
               status: 1,
+              userId: 1,
             },
 
             userStats: 1,
