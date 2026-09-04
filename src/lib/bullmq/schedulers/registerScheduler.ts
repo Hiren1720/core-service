@@ -12,18 +12,7 @@ export const registerSchedulers = () => {
   cron.schedule(
     "59 0 * * *",
     async () => {
-      // await registerAttendanceScheduler();
-    },
-    {
-      timezone: "Asia/Kolkata",
-    },
-  );
-
-   cron.schedule(
-    "* * * * *",
-    async () => {
       await registerAttendanceScheduler();
-      console.log("Running a task every minute");
     },
     {
       timezone: "Asia/Kolkata",
@@ -34,7 +23,7 @@ export const registerSchedulers = () => {
   cron.schedule(
     "45 23 * * *",
     async () => {
-      // await registerAttendanceAutoCloseScheduler();
+      await registerAttendanceAutoCloseScheduler();
     },
     {
       timezone: "Asia/Kolkata",
@@ -46,7 +35,7 @@ export const registerSchedulers = () => {
   cron.schedule(
     "0 1 1 * *",
     async () => {
-      // await registerMonthlyInvoiceScheduler();
+      await registerMonthlyInvoiceScheduler();
     },
     {
       timezone: "Asia/Kolkata",
