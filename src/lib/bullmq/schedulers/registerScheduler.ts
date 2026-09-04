@@ -19,6 +19,16 @@ export const registerSchedulers = () => {
     },
   );
 
+   cron.schedule(
+    "* * * * *",
+    async () => {
+      console.log("Running a task every minute");
+    },
+    {
+      timezone: "Asia/Kolkata",
+    },
+  );
+
   // Auto close at 11:45 PM IST
   cron.schedule(
     "45 23 * * *",
