@@ -567,7 +567,7 @@ export const getEmployeeSalaryDetails = async (
       }),
       UserPayslipModel.find({
         userId,
-      }),
+      }).populate("assignedBy", "firstName lastName profileImage").lean(),
     ]);
 
     return res.status(201).json({
