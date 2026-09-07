@@ -4,6 +4,7 @@ import { ApiResponse } from "../../shared/response/api-response";
 import { attendanceType } from "../../types/types";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { getMyManagedUserIdList } from "../../shared/services/users.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const getAttendanceByDate = async (
   req: Request,
@@ -16,6 +17,10 @@ export const getAttendanceByDate = async (
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     if (!date)
       return res.status(400).json(ApiResponse.error("Date is required"));
@@ -27,7 +32,10 @@ export const getAttendanceByDate = async (
 
     const [result, count] = await Promise.all([
       AttendanceModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role status userId")
+        .populate(
+          "userId",
+          "firstName lastName profileImage role status userId",
+        )
         .populate([
           {
             path: "leaveRequestId",
@@ -46,6 +54,21 @@ export const getAttendanceByDate = async (
         .lean(),
       AttendanceModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = result.map((employee: any) => ({
+        Name: employee.userId.firstName + employee.userId.lastName,
+        totalWorkedMinutes: employee.totalWorkedMinutes,
+        Status: employee.attendanceStatus,
+        inMethod: employee.inMethod,
+        outMethod: employee.outMethod,
+        Date: employee.attendanceDate?.toLocaleDateString(),
+        inTime: employee.inTime?.toLocaleTimeString(),
+        outTime: employee.outTime?.toLocaleTimeString(),
+      }));
+
+      return downloadCsv(res, data, "attendance", csvPassword);
+    }
 
     return res.status(200).json(
       ApiResponse.success(
@@ -119,6 +142,10 @@ export const getManualPunchList = async (
     const limit = Number(req.query.limit) || 10;
     const { month, year } = req.query;
 
+    const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
     const skip = (page - 1) * limit;
     const monthNumber = Number(month);
     const yearNumber = Number(year);
@@ -160,6 +187,21 @@ export const getManualPunchList = async (
         .lean(),
       AttendanceModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = list.map((employee: any) => ({
+        Name: employee.userId.firstName + employee.userId.lastName,
+        totalWorkedMinutes: employee.totalWorkedMinutes,
+        isManualPunchIn: employee.isManualPunchIn,
+        isManualPunchOut: employee.isManualPunchOut,
+        Status: employee.attendanceStatus,
+        Date: employee.attendanceDate?.toLocaleDateString(),
+        inTime: employee.inTime?.toLocaleTimeString(),
+        outTime: employee.outTime?.toLocaleTimeString(),
+      }));
+
+      return downloadCsv(res, data, "attendance", csvPassword);
+    }
 
     return res.status(200).json(
       ApiResponse.success(
