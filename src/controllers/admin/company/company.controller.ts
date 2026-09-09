@@ -139,16 +139,16 @@ export const createCompany = async (
       });
     }
 
+    user.userId = await generateUserUniqueUserId(
+      company._id.toString(),
+      session,
+    );
+
     const userDetails = await user.save({ session });
 
     const companyDetails = await company.save({
       session,
     });
-
-    userDetails.userId = await generateUserUniqueUserId(
-      companyDetails._id.toString(),
-      session,
-    );
 
     await addUserHistory(
       {
@@ -161,7 +161,6 @@ export const createCompany = async (
       },
       session,
     );
-    await userDetails.save({ session });
 
     const html = renderEmailTemplate("onboarding", {
       companyName: "IEKA",
