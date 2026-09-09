@@ -21,7 +21,6 @@ const CompanySchema = new Schema(
     },
     companyEmail: {
       type: String,
-      required: true,
       trim: true,
       lowercase: true,
     },
