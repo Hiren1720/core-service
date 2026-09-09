@@ -92,7 +92,7 @@ export const invoicePayments = async (
     if (statusFilter) {
       pipeline.push({
         $match: {
-          calculatedPaymentStatus: statusFilter,
+          paymentStatus: statusFilter,
         },
       });
     }
@@ -129,7 +129,6 @@ export const invoicePayments = async (
               paymentStatus: 1,
               paidAmount: 1,
               pendingAmount: 1,
-              calculatedPaymentStatus: 1,
 
               companyId: 1,
             },
