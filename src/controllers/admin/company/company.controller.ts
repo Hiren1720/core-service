@@ -94,6 +94,12 @@ export const createCompany = async (
     const password =
       firstName.trim().toLowerCase() + "@" + new Date().getFullYear(); // Default password (should be changed by user)
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const userId = await generateUserUniqueUserId(
+      company._id.toString(),
+      session,
+    );
+
     const [user] = await UserModel.create(
       [
         {
@@ -105,6 +111,7 @@ export const createCompany = async (
           password: hashedPassword,
           companyId: company._id,
           address,
+          userId,
           role: "OWNER",
         },
       ],
@@ -138,11 +145,6 @@ export const createCompany = async (
         fileName: "company-logo",
       });
     }
-
-    user.userId = await generateUserUniqueUserId(
-      company._id.toString(),
-      session,
-    );
 
     const userDetails = await user.save({ session });
 
