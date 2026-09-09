@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:worker": "tsx watch src/index.worker.ts",
-    "build": "tsc",
+    "build": "tsc && npm run copy-templates",
+    "copy-templates": "copyfiles -u 1 \"src/**/**/*.hbs\" dist",
     "start": "node dist/server.js",
     "start:worker": "node dist/index.worker.js"
   },
@@ -42,6 +43,7 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/nodemailer": "^8.0.1",
+    "copyfiles": "^2.4.1",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
