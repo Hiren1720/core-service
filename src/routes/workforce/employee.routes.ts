@@ -4,6 +4,7 @@ import { authenticateUser } from "../../middleware/user.middleware.js";
 import { upload } from "../../middleware/upload.middleware.js";
 import {
   editUserDetail,
+  employeeStatusChange,
   getEmployeeById,
   getEmployeeCount,
   getEmployeeList,
@@ -36,6 +37,13 @@ router.get("/salary", authenticateUser, getEmployeeSalaryDetails);
 
 router.post("/salary", authenticateUser, updateEmployeeSalary);
 
-router.get("/:userId", authenticateUser, getEmployeeById)
+router.get("/:userId", authenticateUser, getEmployeeById);
+
+router.patch(
+  "/status/:userId",
+  authenticateUser,
+  // authorize("OWNER"),
+  employeeStatusChange,
+);
 
 export default router;

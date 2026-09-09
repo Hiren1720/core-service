@@ -7,12 +7,13 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
-import { status } from "../../../types/types.js";
+import { status, userStatus } from "../../../types/types.js";
 import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
 import { generateUserUniqueUserId } from "../../../shared/helpers/generateUserId.js";
 import { addUserHistory } from "../../../shared/services/userHistory.service.js";
+import { UserSessionModel } from "../../../infrastructure/database/models/userSession.model.js";
 
 export const createCompany = async (
   req: Request,
@@ -570,6 +571,97 @@ export const getCompanyById = async (
     return res
       .status(200)
       .json(ApiResponse.success(company, "Company fetched successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const companyStatusChange = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { status, remarks } = req.body;
+
+    const owner = await UserModel.findOne({
+      _id: req.params.userId,
+      companyId: req.user!.companyId,
+      role: "OWNER",
+    });
+
+    if (!owner) {
+      return res.status(404).json(ApiResponse.error("Owner not found"));
+    }
+
+    // Update owner status
+    await UserModel.findByIdAndUpdate(owner._id, {
+      status,
+    });
+
+    // Owner inactive → deactivate all active employees/managers
+    if (status === userStatus.INACTIVE) {
+      // Get only users whose status will actually change
+      const employees = await UserModel.find({
+        companyId: owner.companyId,
+        _id: { $ne: owner._id },
+        role: { $in: ["EMPLOYEE", "MANAGER"] },
+        status: userStatus.ACTIVE,
+      }).select("_id");
+
+      if (employees.length) {
+        const employeeIds = employees.map((employee) => employee._id);
+
+        // Deactivate employees/managers
+        await UserModel.updateMany(
+          {
+            _id: { $in: employeeIds },
+          },
+          {
+            $set: {
+              status: userStatus.INACTIVE,
+            },
+          },
+        );
+
+        // Logout affected users
+        await UserSessionModel.deleteMany({
+          userId: {
+            $in: employeeIds,
+          },
+        });
+
+        // Add history for every affected employee/manager
+        await Promise.all(
+          employees.map((employee) =>
+            addUserHistory({
+              userId: employee._id.toString(),
+              field: "userStatus",
+              fieldId: employee._id.toString(),
+              fieldValue: userStatus.INACTIVE,
+              remarks:
+                remarks ||
+                "Status changed because company owner was made inactive.",
+              assignedBy: owner._id.toString(),
+            }),
+          ),
+        );
+      }
+    }
+
+    // Owner history
+    await addUserHistory({
+      userId: owner._id.toString(),
+      field: "userStatus",
+      fieldId: owner._id.toString(),
+      fieldValue: status,
+      remarks,
+      assignedBy: owner._id.toString(),
+    });
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Company status updated successfully"));
   } catch (error) {
     next(error);
   }

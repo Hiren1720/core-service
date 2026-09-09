@@ -5,11 +5,13 @@ import {
   UserModel,
   UserPayslipModel,
   UserPolicyModel,
+  UserSessionModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
 import { saveFile } from "../../shared/services/file.service";
 import { status, userStatus } from "../../types/types";
 import { getMyManagedUserIdList } from "../../shared/services/users.service";
+import { addUserHistory } from "../../shared/services/userHistory.service";
 
 export const editUserDetail = async (
   req: Request,
@@ -567,7 +569,9 @@ export const getEmployeeSalaryDetails = async (
       }),
       UserPayslipModel.find({
         userId,
-      }).populate("assignedBy", "firstName lastName profileImage").lean(),
+      })
+        .populate("assignedBy", "firstName lastName profileImage")
+        .lean(),
     ]);
 
     return res.status(201).json({
@@ -575,6 +579,47 @@ export const getEmployeeSalaryDetails = async (
       message: "Employee salary fetched successfully",
       data: { current, upcoming, history },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const employeeStatusChange = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { status, remarks } = req.body;
+    const assignedBy = req.user!.id;
+
+    const user = await UserModel.findOne({
+      _id: req.params.userId,
+      companyId: req.user!.companyId,
+    });
+
+    if (!user) {
+      return res.status(404).json(ApiResponse.error("User not found"));
+    }
+
+    await UserModel.findByIdAndUpdate(user._id, { status: status });
+
+    if (status === userStatus.INACTIVE || status === userStatus.DELETED) {
+      await UserSessionModel.deleteMany({ userId: user._id });
+    }
+
+    await addUserHistory({
+      userId: user._id.toString(),
+      field: "userStatus",
+      fieldId: user._id.toString(),
+      fieldValue: status,
+      remarks,
+      assignedBy,
+    });
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Status updated successfully"));
   } catch (error) {
     next(error);
   }
