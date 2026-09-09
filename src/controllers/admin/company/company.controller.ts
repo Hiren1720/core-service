@@ -239,11 +239,6 @@ export const updateCompany = async (
       email,
       phone,
       gender,
-
-      modules,
-      employeePrice,
-      productionPrice,
-      status,
     } = req.body;
 
     // Company fields
@@ -263,21 +258,7 @@ export const updateCompany = async (
 
     if (generateInvoiceWithGST !== undefined)
       company.generateInvoiceWithGST = generateInvoiceWithGST;
-
-    if (employeePrice !== undefined)
-      company.employeePrice = Number(employeePrice);
-
-    if (productionPrice !== undefined)
-      company.productionPrice = Number(productionPrice);
-
-    if (status !== undefined) company.status = status;
-
-    if (modules !== undefined) {
-      company.modules =
-        typeof modules === "string"
-          ? modules.split(",").map((item: string) => item.trim())
-          : modules;
-    }
+  
 
     // Representative fields
     if (firstName !== undefined) representative.firstName = firstName;
@@ -586,7 +567,6 @@ export const companyStatusChange = async (
 
     const owner = await UserModel.findOne({
       _id: req.params.userId,
-      companyId: req.user!.companyId,
       role: "OWNER",
     });
 
