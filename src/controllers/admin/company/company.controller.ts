@@ -159,7 +159,7 @@ export const createCompany = async (
         fieldId: userDetails._id.toString(),
         fieldValue: userDetails.status,
         remarks: "New added",
-        assignedBy: "",
+        assignedBy: userDetails._id.toString(),
       },
       session,
     );
