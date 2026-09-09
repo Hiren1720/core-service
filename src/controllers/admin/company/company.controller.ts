@@ -44,6 +44,8 @@ export const createCompany = async (
       modules,
       employeePrice,
       productionPrice,
+
+      remarks,
     } = req.body;
 
     const parsedModules =
@@ -158,7 +160,7 @@ export const createCompany = async (
         field: "userStatus",
         fieldId: userDetails._id.toString(),
         fieldValue: userDetails.status,
-        remarks: "New added",
+        remarks: remarks,
         assignedBy: userDetails._id.toString(),
       },
       session,
