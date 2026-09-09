@@ -143,6 +143,12 @@ const InvoiceSchema = new Schema(
       enum: ["GENERATED", "SENDED"],
       default: "GENERATED",
     },
+
+    invoicePdf: {
+      type: String,
+      default: null,
+    },
+
     paymentStatus: {
       type: String,
       enum: ["PENDING", "PAID"],

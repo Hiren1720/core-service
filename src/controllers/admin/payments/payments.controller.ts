@@ -37,6 +37,7 @@ export const invoicePayments = async (
     const matchFilter: any = {
       billingYear: year,
       billingMonth: month,
+      status: "SENDED"
     };
 
     /*

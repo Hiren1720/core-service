@@ -40,6 +40,10 @@ interface SendMailOptions {
     subject: string;
     html?: string;
     text?: string;
+    attachments?: Array<{
+        filename: string;
+        path: string;
+    }>;
 }
 
 export const sendMail = async ({
@@ -47,6 +51,7 @@ export const sendMail = async ({
     subject,
     html,
     text,
+    attachments,
 }: SendMailOptions) => {
     const transporter =
         await createTransporter();
@@ -57,5 +62,6 @@ export const sendMail = async ({
         subject,
         html,
         text,
+        attachments,
     });
 };

@@ -6,6 +6,10 @@ import {
   MonthlyEmployeeSnapshotModel,
 } from "../../../infrastructure/database/models";
 import { Types } from "mongoose";
+import path from "path";
+import { saveFile } from "../../../shared/services/file.service.js";
+import { sendMail } from "../../../shared/services/mail.service.js";
+import { renderEmailTemplate } from "../../../shared/templates/index.js";
 
 export const getCompanyEmployeeStatusHistory = async (
   req: Request,
@@ -159,7 +163,7 @@ export const getInvoiceDetails = async (
   next: NextFunction,
 ) => {
   try {
-    const { invoiceId } = req.params;
+    const invoiceId = req.params.invoiceId as string;
 
     if (!Types.ObjectId.isValid(invoiceId as string)) {
       return res.status(400).json(ApiResponse.error("Invalid invoice ID"));
@@ -195,6 +199,88 @@ export const getInvoiceDetails = async (
         ApiResponse.success(
           { invoice, admin: admin?.company },
           "Invoice details fetched",
+        ),
+      );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendInvoice = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const invoiceId = req.params.invoiceId as string;
+
+    if (!Types.ObjectId.isValid(invoiceId)) {
+      return res.status(400).json(ApiResponse.error("Invalid invoice ID"));
+    }
+
+    const invoice = await InvoiceModel.findById(invoiceId)
+      .populate("companyId", "companyName invoiceEmail")
+      .exec();
+
+    if (!invoice) {
+      return res.status(404).json(ApiResponse.error("Invoice not found"));
+    }
+
+    const company = invoice.companyId as unknown as {
+      companyName: string;
+      invoiceEmail?: string | null;
+    };
+    const file = req.file;
+
+    if (!file || file.mimetype !== "application/pdf") {
+      return res
+        .status(400)
+        .json(ApiResponse.error("A PDF invoice file is required"));
+    }
+
+    if (!company.invoiceEmail) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Company invoice email is not configured"));
+    }
+
+    const invoicePdf = saveFile({
+      file,
+      folder: "invoices",
+      entityId: invoice._id.toString(),
+      fileName: "invoice",
+    });
+    const attachmentPath = path.join(process.cwd(), "public", invoicePdf);
+    const html = renderEmailTemplate("invoice", {
+      companyName: company.companyName,
+      invoiceNumber: invoice.invoiceNumber,
+      billingMonth: invoice.billingMonth,
+      billingYear: invoice.billingYear,
+      totalAmount: invoice.totalAmount.toFixed(2),
+    });
+
+    await sendMail({
+      to: company.invoiceEmail,
+      subject: `Invoice ${invoice.invoiceNumber}`,
+      html,
+      attachments: [
+        {
+          filename: `${invoice.invoiceNumber}.pdf`,
+          path: attachmentPath,
+        },
+      ],
+    });
+
+    invoice.invoicePdf = invoicePdf;
+    invoice.status = "SENDED";
+    await invoice.save();
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(
+          { invoiceId: invoice._id, status: invoice.status },
+          "Invoice sent successfully",
         ),
       );
   } catch (error) {
