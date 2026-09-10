@@ -7,9 +7,9 @@ import {
 } from "../../../infrastructure/database/models";
 import { Types } from "mongoose";
 import path from "path";
-import { saveFile } from "../../../shared/services/file.service.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
+import { generateInvoicePdf } from "../../../services/generate-invoice-pdf";
 
 export const getCompanyEmployeeStatusHistory = async (
   req: Request,
@@ -214,7 +214,7 @@ export const sendInvoice = async (
   next: NextFunction,
 ) => {
   try {
-    const { remarks } = req.body;
+    const { remarks, invoicePdf } = req.body;
     const invoiceId = req.params.invoiceId as string;
 
     if (!Types.ObjectId.isValid(invoiceId)) {
@@ -233,13 +233,6 @@ export const sendInvoice = async (
       companyName: string;
       invoiceEmail?: string | null;
     };
-    const file = req.file;
-
-    if (!file || file.mimetype !== "application/pdf") {
-      return res
-        .status(400)
-        .json(ApiResponse.error("A PDF invoice file is required"));
-    }
 
     if (!company.invoiceEmail) {
       return res
@@ -247,13 +240,19 @@ export const sendInvoice = async (
         .json(ApiResponse.error("Company invoice email is not configured"));
     }
 
-    const invoicePdf = saveFile({
-      file,
-      folder: "invoices",
-      entityId: invoice._id.toString(),
-      fileName: "invoice",
-    });
-    const attachmentPath = path.join(process.cwd(), "public", invoicePdf);
+    const invoicePdfUrl = await generateInvoicePdf(
+      invoicePdf,
+      invoice.companyId._id.toString() +
+        "-" +
+        invoice.billingMonth +
+        "-" +
+        invoice.billingYear,
+    );
+    const attachmentPath = path.join(
+      process.cwd(),
+      "public",
+      invoicePdfUrl.replace(/^\/+/, ""),
+    );
     const html = renderEmailTemplate("invoice", {
       companyName: company.companyName,
       invoiceNumber: invoice.invoiceNumber,
@@ -274,7 +273,7 @@ export const sendInvoice = async (
       ],
     });
 
-    invoice.invoicePdf = invoicePdf;
+    invoice.invoicePdf = invoicePdfUrl;
     invoice.status = "SENDED";
     invoice.mailSentAt = new Date();
     invoice.mailSentRemarks = remarks;

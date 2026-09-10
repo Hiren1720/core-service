@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticateAdmin } from "../../middleware/adminAuth.middleware.js";
-import { createBankAccount, getBankAccounts, updateBankAccountStatus } from "../../controllers/admin/profile/bankAccount.controller.js";
+import { createBankAccount, getBankAccounts, updateBankAccount } from "../../controllers/admin/profile/bankAccount.controller.js";
 
 const router = Router();
 
@@ -17,9 +17,9 @@ router.get(
 );
 
 router.put(
-    "/status/:id",
+    "/:id",
     authenticateAdmin,
-    updateBankAccountStatus
+    updateBankAccount
 );
 
 export default router;

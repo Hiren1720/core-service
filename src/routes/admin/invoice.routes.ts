@@ -21,7 +21,6 @@ router.get(
 router.post(
     "/:invoiceId/send",
     authenticateAdmin,
-    upload.single("invoicePdf"),
     sendInvoice,
 );
 
