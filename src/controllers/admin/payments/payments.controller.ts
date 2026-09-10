@@ -282,7 +282,7 @@ export const addInvoicePayment = async (
     const receivedAmount = (invoice.payments || []).reduce(
       (total, payment) => total + Number(payment.amount || 0),
       0,
-    );
+    ).toFixed(2);
 
     /*
      * -------------------------------------------------------
@@ -303,7 +303,7 @@ export const addInvoicePayment = async (
      */
 
     const pendingAmount = invoice.totalAmount - receivedAmount;
-
+    console.log(invoice.totalAmount , receivedAmount)
     /*
      * Don't allow payment greater than pending amount.
      *
@@ -321,7 +321,7 @@ export const addInvoicePayment = async (
         .status(400)
         .json(
           ApiResponse.error(
-            `Payment amount cannot exceed pending amount of ${pendingAmount}`,
+            `Payment amount cannot exceed pending amount of ${pendingAmount.toFixed(2)}`,
           ),
         );
     }
