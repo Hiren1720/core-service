@@ -23,7 +23,7 @@ export const authenticateUser = async (
 
     const decoded = verifyAccessToken(token);
 
-    if (decoded.role === "ADMIN") {
+    if (decoded.role !== "ADMIN") {
       const user = await UserModel.findOne({
         _id: decoded.userId,
         status: userStatus.ACTIVE,
