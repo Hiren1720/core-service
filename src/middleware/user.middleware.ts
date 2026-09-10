@@ -44,7 +44,7 @@ export const authenticateUser = async (
         }).lean();
 
         if (!user) {
-            res.status(403).json({
+            res.status(401).json({
                 success: false,
                 message: "User account is not active",
             });
