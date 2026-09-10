@@ -7,7 +7,7 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
-import { status, userStatus } from "../../../types/types.js";
+import { userStatus } from "../../../types/types.js";
 import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
@@ -510,19 +510,41 @@ export const getCompaniesCount = async (
   next: NextFunction,
 ) => {
   try {
-    const [active, inactive, deleted] = await Promise.all([
-      CompanyModel.countDocuments({ status: "ACTIVE" as status }),
-      CompanyModel.countDocuments({ status: "INACTIVE" as status }),
-      CompanyModel.countDocuments({ status: "DELETED" as status }),
+    const companyCounts = await CompanyModel.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "companyRepresentative",
+          foreignField: "_id",
+          as: "companyRepresentative",
+        },
+      },
+      {
+        $unwind: "$companyRepresentative",
+      },
+      {
+        $group: {
+          _id: "$companyRepresentative.status",
+          count: { $sum: 1 },
+        },
+      },
     ]);
+
+    const counts = companyCounts.reduce(
+      (result, item) => {
+        if (item._id === userStatus.ACTIVE) result.active = item.count;
+        if (item._id === userStatus.INACTIVE) result.inactive = item.count;
+        if (item._id === userStatus.DELETED) result.deleted = item.count;
+        return result;
+      },
+      { active: 0, inactive: 0, deleted: 0 },
+    );
 
     return res.status(200).json(
       ApiResponse.success(
         {
-          total: active + inactive + deleted,
-          active,
-          inactive,
-          deleted,
+          total: counts.active + counts.inactive + counts.deleted,
+          ...counts,
         },
         "Company counts fetched successfully",
       ),
