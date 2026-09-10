@@ -339,11 +339,11 @@ export const updateCompany = async (
       });
     }
 
-     if (
+    if (
       employeePrice !== undefined &&
       employeePrice !== company.employeePrice
     ) {
-      company.employeePrice =employeePrice;
+      company.employeePrice = employeePrice;
       await addUserHistory({
         userId: representative._id.toString(),
         field: "employeePrice",
@@ -355,7 +355,6 @@ export const updateCompany = async (
     }
 
     await Promise.all([company.save(), representative.save()]);
-
 
     return res
       .status(200)

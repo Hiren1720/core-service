@@ -401,6 +401,7 @@ export const getYearwisePaymentsList = async (
     const list = await InvoiceModel.find({
       companyId: companyId as string,
       status: "SENDED",
+      billingYear: year
     })
       .select(
         "billingMonth totalAmount payments mailSentAt generatedAt paymentStatus invoicePdf sGST cGST mailSentRemarks",
