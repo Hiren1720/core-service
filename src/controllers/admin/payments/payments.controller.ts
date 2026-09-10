@@ -372,7 +372,7 @@ export const addInvoicePayment = async (
           invoiceNumber: invoice.invoiceNumber,
           totalAmount: invoice.totalAmount,
           paidAmount: newReceivedAmount,
-          pendingAmount: Math.max(invoice.totalAmount - newReceivedAmount, 0),
+          pendingAmount: Math.max(invoice.totalAmount - newReceivedAmount, 0).toFixed(2),
           paymentStatus: invoice.paymentStatus,
           payments: invoice.payments,
         },
