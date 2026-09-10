@@ -282,7 +282,7 @@ export const addInvoicePayment = async (
     const receivedAmount = (invoice.payments || []).reduce(
       (total, payment) => total + Number(payment.amount || 0),
       0,
-    ).toFixed(2);
+    );
 
     /*
      * -------------------------------------------------------
@@ -303,7 +303,6 @@ export const addInvoicePayment = async (
      */
 
     const pendingAmount = invoice.totalAmount - receivedAmount;
-    console.log(invoice.totalAmount , receivedAmount)
     /*
      * Don't allow payment greater than pending amount.
      *
@@ -316,7 +315,7 @@ export const addInvoicePayment = async (
      * Admin cannot add ₹4,000.
      */
 
-    if (paymentAmount > pendingAmount) {
+    if (paymentAmount > Number(pendingAmount.toFixed(2))) {
       return res
         .status(400)
         .json(
