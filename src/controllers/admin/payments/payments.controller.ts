@@ -403,7 +403,7 @@ export const getYearwisePaymentsList = async (
       status: "SENDED",
     })
       .select(
-        "billingMonth totalAmount payments mailSentAt generatedAt paymentStatus invoicePdf sGST cGST",
+        "billingMonth totalAmount payments mailSentAt generatedAt paymentStatus invoicePdf sGST cGST mailSentRemarks",
       )
       .lean();
 

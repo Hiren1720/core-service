@@ -167,6 +167,18 @@ export const createCompany = async (
       session,
     );
 
+    await addUserHistory(
+      {
+        userId: userDetails._id.toString(),
+        field: "employeePrice",
+        fieldId: userDetails._id.toString(),
+        fieldValue: employeePrice,
+        remarks: remarks,
+        assignedBy: userDetails._id.toString(),
+      },
+      session,
+    );
+
     const html = renderEmailTemplate("onboarding", {
       companyName: "IEKA",
       userName: firstName + " " + lastName,
@@ -239,6 +251,10 @@ export const updateCompany = async (
       email,
       phone,
       gender,
+
+      employeePrice,
+      module,
+      remarks,
     } = req.body;
 
     // Company fields
@@ -324,6 +340,20 @@ export const updateCompany = async (
     }
 
     await Promise.all([company.save(), representative.save()]);
+
+    if (
+      employeePrice !== undefined &&
+      employeePrice !== company.employeePrice
+    ) {
+      await addUserHistory({
+        userId: representative._id.toString(),
+        field: "employeePrice",
+        fieldId: representative._id.toString(),
+        fieldValue: employeePrice,
+        remarks: remarks,
+        assignedBy: representative._id.toString(),
+      });
+    }
 
     return res
       .status(200)

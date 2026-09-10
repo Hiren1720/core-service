@@ -96,7 +96,9 @@ export const getInvoiceList = async (
 
     const [list, total, amount, generated, sended] = await Promise.all([
       InvoiceModel.find(filter)
-        .select("invoiceNumber status totalAmount")
+        .select(
+          "invoiceNumber status totalAmount mailSentRemarks mailSentAt generatedAt ",
+        )
         .populate({
           path: "companyId",
           select: "companyName companyAddress companyLogo",
@@ -212,6 +214,7 @@ export const sendInvoice = async (
   next: NextFunction,
 ) => {
   try {
+    const { remarks } = req.body;
     const invoiceId = req.params.invoiceId as string;
 
     if (!Types.ObjectId.isValid(invoiceId)) {
@@ -274,6 +277,7 @@ export const sendInvoice = async (
     invoice.invoicePdf = invoicePdf;
     invoice.status = "SENDED";
     invoice.mailSentAt = new Date();
+    invoice.mailSentRemarks = remarks;
     await invoice.save();
 
     return res

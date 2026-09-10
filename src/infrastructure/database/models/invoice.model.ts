@@ -143,6 +143,11 @@ const InvoiceSchema = new Schema(
       default: null,
     },
 
+    mailSentRemarks: {
+      type: String,
+      default: ""
+    },
+
     status: {
       type: String,
       enum: ["GENERATED", "SENDED"],
