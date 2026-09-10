@@ -339,12 +339,11 @@ export const updateCompany = async (
       });
     }
 
-    await Promise.all([company.save(), representative.save()]);
-
-    if (
+     if (
       employeePrice !== undefined &&
       employeePrice !== company.employeePrice
     ) {
+      company.employeePrice =employeePrice;
       await addUserHistory({
         userId: representative._id.toString(),
         field: "employeePrice",
@@ -355,9 +354,12 @@ export const updateCompany = async (
       });
     }
 
+    await Promise.all([company.save(), representative.save()]);
+
+
     return res
       .status(200)
-      .json(ApiResponse.success(null, "Company updated successfully"));
+      .json(ApiResponse.success(null, "Details updated successfully"));
   } catch (error) {
     next(error);
   }
