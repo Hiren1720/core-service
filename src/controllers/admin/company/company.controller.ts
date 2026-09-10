@@ -258,7 +258,6 @@ export const updateCompany = async (
 
     if (generateInvoiceWithGST !== undefined)
       company.generateInvoiceWithGST = generateInvoiceWithGST;
-  
 
     // Representative fields
     if (firstName !== undefined) representative.firstName = firstName;
@@ -649,17 +648,55 @@ export const companyStatusChange = async (
           ),
         );
       }
-    }
 
-    // Owner history
-    await addUserHistory({
-      userId: owner._id.toString(),
-      field: "userStatus",
-      fieldId: owner._id.toString(),
-      fieldValue: status,
-      remarks,
-      assignedBy: owner._id.toString(),
-    });
+      // Owner history
+      await addUserHistory({
+        userId: owner._id.toString(),
+        field: "userStatus",
+        fieldId: owner._id.toString(),
+        fieldValue: status,
+        remarks,
+        assignedBy: owner._id.toString(),
+      });
+    } else if (status === userStatus.DELETED) {
+      const companyId = owner.companyId;
+      const userIds = (await UserModel.distinct("_id", {
+        companyId,
+      })) as mongoose.Types.ObjectId[];
+
+      const userIdStrings = userIds.map((userId) => userId.toString());
+
+      await Promise.all(
+        Object.entries(mongoose.connection.collections)
+          .filter(([name]) => name !== "admins")
+          .map(([, collection]) =>
+            collection.deleteMany({
+              $or: [
+                { _id: companyId },
+                { companyId },
+                { userId: { $in: userIds } },
+                { assignedBy: { $in: userIds } },
+                { reportingManagerId: { $in: userIds } },
+                { fieldId: { $in: userIdStrings } },
+              ],
+            }),
+          ),
+      );
+
+      return res
+        .status(200)
+        .json(ApiResponse.success(null, "Company deleted successfully"));
+    } else {
+      // Owner history
+      await addUserHistory({
+        userId: owner._id.toString(),
+        field: "userStatus",
+        fieldId: owner._id.toString(),
+        fieldValue: status,
+        remarks,
+        assignedBy: owner._id.toString(),
+      });
+    }
 
     return res
       .status(200)
