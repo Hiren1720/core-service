@@ -37,7 +37,7 @@ export const invoicePayments = async (
     const matchFilter: any = {
       billingYear: year,
       billingMonth: month,
-      status: "SENDED"
+      status: "SENDED",
     };
 
     /*
@@ -379,6 +379,37 @@ export const addInvoicePayment = async (
         "Payment added successfully",
       ),
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getYearwisePaymentsList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { companyId } = req.query;
+    const year = Number(req.query.year);
+    if (!year || !companyId) {
+      return res
+        .status(400)
+        .json(ApiResponse.error("Valid year and companyId are required"));
+    }
+
+    const list = await InvoiceModel.find({
+      companyId: companyId as string,
+      status: "SENDED",
+    })
+      .select(
+        "billingMonth totalAmount payments mailSentAt generatedAt paymentStatus invoicePdf sGST cGST",
+      )
+      .lean();
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(list, "Invoice list fetched"));
   } catch (error) {
     next(error);
   }

@@ -138,6 +138,11 @@ const InvoiceSchema = new Schema(
       default: Date.now,
     },
 
+    mailSentAt: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["GENERATED", "SENDED"],

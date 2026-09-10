@@ -273,6 +273,7 @@ export const sendInvoice = async (
 
     invoice.invoicePdf = invoicePdf;
     invoice.status = "SENDED";
+    invoice.mailSentAt = new Date();
     await invoice.save();
 
     return res
