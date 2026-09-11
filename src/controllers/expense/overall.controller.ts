@@ -87,8 +87,8 @@ export const getOverallExpensesCount = async (
       pastFilter.userId = new mongoose.Types.ObjectId(id);
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
-      currentFilter.userId = { $in: [...userIds, id] };
-      pastFilter.userId = { $in: [...userIds, id] };
+      currentFilter.userId = { $in: [...userIds, new mongoose.Types.ObjectId(id)] };
+      pastFilter.userId = { $in: [...userIds, new mongoose.Types.ObjectId(id)] };
     }
 
     const [reimbursement, officeExpense, pastReimbursement, pastOfficeExpense] =
