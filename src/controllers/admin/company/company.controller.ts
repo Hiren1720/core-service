@@ -663,6 +663,10 @@ export const companyStatusChange = async (
           },
         });
 
+        await UserSessionModel.deleteMany({
+          userId: owner._id,
+        });
+
         // Add history for every affected employee/manager
         await Promise.all(
           employees.map((employee) =>
