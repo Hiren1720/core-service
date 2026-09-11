@@ -19,6 +19,8 @@ import { status, userStatus } from "../../types/types";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { generateUserLeaveBalance } from "../../services/leave.service";
 import { generateUserUniqueUserId } from "../../shared/helpers/generateUserId";
+import { sendMail } from "../../shared/services/mail.service";
+import { renderEmailTemplate } from "../../shared/templates";
 
 export const createEmployee = async (
   req: Request,
@@ -212,6 +214,19 @@ export const createEmployee = async (
       ],
       { session },
     );
+
+    const html = renderEmailTemplate("onboarding", {
+      companyName: "IEKA",
+      userName: firstName + " " + lastName,
+      userId: uniqueId,
+      password: password,
+    });
+
+    await sendMail({
+      to: user.email,
+      subject: `Welcome to IEKA - Your Account Details`,
+      html,
+    });
 
     await session.commitTransaction();
 

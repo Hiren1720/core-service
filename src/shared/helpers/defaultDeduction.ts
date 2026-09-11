@@ -1,4 +1,4 @@
-import { DeductionModel } from "../../infrastructure/database/models";
+import { DeductionModel, PayslipModel } from "../../infrastructure/database/models";
 import { defaultDeductionType, payslipValueType } from "../../types/types";
 
 export const defaultDeduction = async (companyId: string) => {
@@ -62,6 +62,47 @@ export const defaultDeduction = async (companyId: string) => {
     await DeductionModel.create({
       companyId: companyId,
       incomeDetails,
+      details,
+    });
+  } catch (e) {
+    throw new Error("Deduction not added");
+  }
+};
+
+export const defaultPayslip = async (companyId: string) => {
+  try {
+    const details = [
+      {
+        name: "Basic",
+        value: 50,
+        valueType: payslipValueType.PERCENTAGE,
+      },
+      {
+        name: "HRA",
+        value: 20,
+        valueType: payslipValueType.PERCENTAGE,
+      },
+      {
+        name: "Conveyence Allowance",
+        value: 7.5,
+        valueType: payslipValueType.PERCENTAGE,
+      },
+      {
+        name: "Education Allowance",
+        value: 0.25,
+        valueType: payslipValueType.PERCENTAGE,
+      },
+      {
+        name: "LTA",
+        value: 7.5,
+        valueType: payslipValueType.PERCENTAGE,
+      },
+    ];
+
+
+    await PayslipModel.create({
+      companyId: companyId,
+      name: "Basic Payslip",
       details,
     });
   } catch (e) {

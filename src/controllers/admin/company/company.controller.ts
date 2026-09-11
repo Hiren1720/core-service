@@ -8,7 +8,7 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
 import { userStatus } from "../../../types/types.js";
-import { defaultDeduction } from "../../../shared/helpers/defaultDeduction.js";
+import { defaultDeduction, defaultPayslip } from "../../../shared/helpers/defaultDeduction.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
 import { generateUserUniqueUserId } from "../../../shared/helpers/generateUserId.js";
@@ -194,6 +194,7 @@ export const createCompany = async (
 
     await session.commitTransaction();
     await defaultDeduction(companyDetails._id.toString()); // add default deduction company wise
+    await defaultPayslip(companyDetails._id.toString());
 
     return res.status(201).json(
       ApiResponse.success(
