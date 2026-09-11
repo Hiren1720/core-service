@@ -203,7 +203,7 @@ export const getReimbursementsCount = async (
       filter.userId = new mongoose.Types.ObjectId(id);
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
-      filter.userId = { $in: [...userIds, id] };
+      filter.userId = { $in: [...userIds, new mongoose.Types.ObjectId(id)] };
     }
 
     const month = req.query.month ? Number(req.query.month) : undefined;
