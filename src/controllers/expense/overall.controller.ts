@@ -6,6 +6,7 @@ import {
 } from "../../infrastructure/database/models";
 import { expenseStatus } from "../../types/types";
 import { ApiResponse } from "../../shared/response/api-response";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const getOverallExpensesCount = async (
   req: Request,
@@ -13,7 +14,7 @@ export const getOverallExpensesCount = async (
   next: NextFunction,
 ) => {
   try {
-    const { role } = req.user!;
+    const { role, id } = req.user!;
 
     let companyId;
     if (role === "ADMIN") {
@@ -79,6 +80,15 @@ export const getOverallExpensesCount = async (
         $gte: new Date(previousYear, previousMonth - 1, 1),
         $lt: new Date(previousYear, previousMonth, 1),
       };
+    }
+
+    if (role === "EMPLOYEE") {
+      currentFilter.userId = new mongoose.Types.ObjectId(id);
+      pastFilter.userId = new mongoose.Types.ObjectId(id);
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      currentFilter.userId = { $in: [...userIds, id] };
+      pastFilter.userId = { $in: [...userIds, id] };
     }
 
     const [reimbursement, officeExpense, pastReimbursement, pastOfficeExpense] =
