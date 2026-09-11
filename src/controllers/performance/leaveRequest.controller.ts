@@ -10,12 +10,14 @@ import { calculateLeaveDays } from "../../services/calculateLeaveDays";
 import {
   LeaveRequestModel,
   UserLeaveBalanceModel,
+  UserModel,
 } from "../../infrastructure/database/models";
 import { leaveStatusType } from "../../types/types";
 import { validateLeaveBalance } from "../../services/leave.service";
 import { addUserHistory } from "../../shared/services/userHistory.service";
 import { normalizeDate } from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
+import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
 export const getMyLeavesBucket = async (
   req: Request,
@@ -379,8 +381,8 @@ export const getLeavesApplications = async (
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-
     const skip = (page - 1) * limit;
+    const { role, companyId, id } = req.user!;
 
     const search = req.query.search?.toString() || "";
     const status = req.query.status?.toString();
@@ -389,14 +391,55 @@ export const getLeavesApplications = async (
       ? String(req.query.csvPassword)
       : undefined;
 
-    const filter: any = {};
+    const filter: any = {
+      companyId,
+    };
 
-    // if (search) {
-    //   filter.name = {
-    //     $regex: search,
-    //     $options: "i",
-    //   };
-    // }
+    if (search) {
+      const users = await UserModel.find({
+        companyId: req.user!.companyId,
+        $or: [
+          {
+            firstName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            lastName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+        ],
+      }).select("_id");
+
+      const searchUserIds = users.map((user) => user._id);
+
+      if (role === "EMPLOYEE") {
+        filter.userId = {
+          $in: searchUserIds.filter(
+            (userId) => userId.toString() === id.toString(),
+          ),
+        };
+      } else if (role === "MANAGER") {
+        const managedUserIds = await getMyManagedUserIdList(id);
+
+        const allowedUserIds = [...managedUserIds, id].map((id) =>
+          id.toString(),
+        );
+
+        filter.userId = {
+          $in: searchUserIds.filter((userId) =>
+            allowedUserIds.includes(userId.toString()),
+          ),
+        };
+      } else {
+        filter.userId = {
+          $in: searchUserIds,
+        };
+      }
+    }
 
     if (status) {
       filter.status = status;
