@@ -495,7 +495,17 @@ export const getLeaveApplicationCount = async (
   next: NextFunction,
 ) => {
   try {
-    const filter: any = {};
+    const { role, id } = req.user!;
+    const filter: any = {
+      companyId: req.user!.companyId,
+    };
+
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
 
     const [approved, rejected, pending] = await Promise.all([
       LeaveRequestModel.countDocuments({
