@@ -200,12 +200,13 @@ export const getReimbursementsCount = async (
     };
 
     if (role === "EMPLOYEE") {
-      filter.userId = id;
+      filter.userId = new mongoose.Types.ObjectId(id);
     } else if (role === "MANAGER") {
       const userIds = await getMyManagedUserIdList(id);
       filter.userId = { $in: userIds };
     }
 
+    console.log("filter", filter);
     const month = req.query.month ? Number(req.query.month) : undefined;
     const year = req.query.year ? Number(req.query.year) : undefined;
 

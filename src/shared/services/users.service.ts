@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import {
   UserAssignmentModel,
   UserModel,
@@ -30,5 +31,5 @@ export const getMyManagedUserIdList = async (id: string) => {
 
   const users = await UserModel.find(managerManagedFilter).select("_id").lean();
 
-  return users;
+  return users.map((id) => new mongoose.Types.ObjectId(id._id));
 };
