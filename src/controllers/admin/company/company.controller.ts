@@ -641,6 +641,10 @@ export const companyStatusChange = async (
         status: userStatus.ACTIVE,
       }).select("_id");
 
+      await UserSessionModel.deleteMany({
+        userId: owner._id,
+      });
+
       if (employees.length) {
         const employeeIds = employees.map((employee) => employee._id);
 
@@ -661,10 +665,6 @@ export const companyStatusChange = async (
           userId: {
             $in: employeeIds,
           },
-        });
-
-        await UserSessionModel.deleteMany({
-          userId: owner._id,
         });
 
         // Add history for every affected employee/manager
