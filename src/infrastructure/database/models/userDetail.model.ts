@@ -132,7 +132,7 @@ const UserDetailSchema = new Schema(
           default: "",
         },
         cardNumber: {
-          type: Number,
+          type: String,
           default: null,
         },
         front: { type: String, default: "" },
