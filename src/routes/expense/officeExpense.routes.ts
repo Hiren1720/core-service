@@ -21,7 +21,7 @@ router.post(
     },
   ]),
   authenticateUser,
-  authorize("OWNER", "MANGER"),
+  authorize("OWNER", "MANAGER"),
   createOfficeExpense,
 );
 
@@ -34,7 +34,7 @@ router.get("/:officeExpenseId", authenticateUser, getOfficeExpenseById);
 router.patch(
   "/status/:officeExpenseId",
   authenticateUser,
-  authorize("OWNER", "MANGER"),
+  authorize("OWNER", "MANAGER"),
   updateOfficeExpenseStatus,
 );
 
