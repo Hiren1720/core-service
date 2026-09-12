@@ -322,6 +322,7 @@ export const myLeaveAndManualPunch = async (
         .lean(),
 
       AttendanceModel.find({
+        userId: id,
         attendanceDate: {
           $gte: startDate,
           $lte: endDate,
