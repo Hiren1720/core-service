@@ -64,6 +64,7 @@ export const validateLeaveBalance = async (
   userId: string,
   leaveId: string,
   totalDays: number,
+  session: ClientSession
 ) => {
   const currentYear = new Date().getFullYear();
 
@@ -71,7 +72,7 @@ export const validateLeaveBalance = async (
     userId,
     leaveId,
     year: currentYear,
-  });
+  }).session(session);
 
   if (!leaveBalance) {
     throw new Error("Leave balance not found");

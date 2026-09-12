@@ -3,6 +3,7 @@ import {
   UserPolicyModel,
   LeaveRequestModel,
 } from "../infrastructure/database/models";
+import { ClientSession } from "mongoose";
 
 interface ValidateLeaveProps {
   userId: string;
@@ -72,7 +73,7 @@ export const validateLeaveOverlap = async (
   userId: string,
   startDate: Date,
   endDate: Date,
-  excludeLeaveRequestId?: string,
+  session: ClientSession | null,
 ) => {
   const filter: any = {
     userId,
@@ -87,13 +88,7 @@ export const validateLeaveOverlap = async (
     },
   };
 
-  if (excludeLeaveRequestId) {
-    filter._id = {
-      $ne: excludeLeaveRequestId,
-    };
-  }
-
-  const existingLeave = await LeaveRequestModel.findOne(filter);
+  const existingLeave = await LeaveRequestModel.findOne(filter).session(session);
   if (existingLeave) {
     throw new Error("Leave already exists for selected dates");
   }
@@ -107,13 +102,10 @@ interface ValidateContinuousProps {
   enabled: boolean;
 }
 
-export const validateContinuousLeave = async ({
-  userId,
-  startDate,
-  endDate,
-  maxLeaves,
-  enabled,
-}: ValidateContinuousProps) => {
+export const validateContinuousLeave = async (
+  { userId, startDate, endDate, maxLeaves, enabled }: ValidateContinuousProps,
+  session: ClientSession | null,
+) => {
   if (!enabled) return;
 
   const previousLeaves = await LeaveRequestModel.find({
@@ -127,7 +119,7 @@ export const validateContinuousLeave = async ({
     startDate: {
       $lte: new Date(endDate.getTime() + maxLeaves * 86400000),
     },
-  }).select("startDate endDate");
+  }).select("startDate endDate").session(session);
 
   const leaveDates = new Set<string>();
 

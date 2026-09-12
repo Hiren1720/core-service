@@ -121,20 +121,23 @@ export const applyLeave = async (
       // Check overlap for this date
       // --------------------------------------------------
 
-      await validateLeaveOverlap(userId, leaveDate, leaveDate);
+      await validateLeaveOverlap(userId, leaveDate, leaveDate, session);
 
       // --------------------------------------------------
       // Continuous leave rule
       // --------------------------------------------------
 
       if (policy.continuousLeave?.enabled) {
-        await validateContinuousLeave({
-          userId,
-          startDate: leaveDate,
-          endDate: leaveDate,
-          maxLeaves: policy.continuousLeave.maxLeaves,
-          enabled: policy.continuousLeave.enabled,
-        });
+        await validateContinuousLeave(
+          {
+            userId,
+            startDate: leaveDate,
+            endDate: leaveDate,
+            maxLeaves: policy.continuousLeave.maxLeaves,
+            enabled: policy.continuousLeave.enabled,
+          },
+          session,
+        );
       }
 
       // --------------------------------------------------
@@ -145,6 +148,7 @@ export const applyLeave = async (
         userId,
         leaveId,
         totalDays,
+        session,
       );
 
       // --------------------------------------------------
