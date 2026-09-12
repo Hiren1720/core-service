@@ -395,6 +395,13 @@ export const getLeavesApplications = async (
       companyId,
     };
 
+    if (role === "EMPLOYEE") {
+      filter.userId = id;
+    } else if (role === "MANAGER") {
+      const userIds = await getMyManagedUserIdList(id);
+      filter.userId = { $in: [...userIds, id] };
+    }
+
     if (search) {
       const users = await UserModel.find({
         companyId: req.user!.companyId,
@@ -417,11 +424,7 @@ export const getLeavesApplications = async (
       const searchUserIds = users.map((user) => user._id);
 
       if (role === "EMPLOYEE") {
-        filter.userId = {
-          $in: searchUserIds.filter(
-            (userId) => userId.toString() === id.toString(),
-          ),
-        };
+        filter.userId = id;
       } else if (role === "MANAGER") {
         const managedUserIds = await getMyManagedUserIdList(id);
 
@@ -439,6 +442,7 @@ export const getLeavesApplications = async (
           $in: searchUserIds,
         };
       }
+    } else {
     }
 
     if (status) {

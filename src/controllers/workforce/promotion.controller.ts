@@ -101,11 +101,7 @@ export const getPromotions = async (
       const searchUserIds = users.map((user) => user._id);
 
       if (role === "EMPLOYEE") {
-        filter.userId = {
-          $in: searchUserIds.filter(
-            (userId) => userId.toString() === id.toString(),
-          ),
-        };
+        filter.userId = id;
       } else if (role === "MANAGER") {
         const managedUserIds = await getMyManagedUserIdList(id);
 
