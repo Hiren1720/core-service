@@ -62,7 +62,7 @@ router.get(
   getBranchShiftDepartmentList,
 );
 
-router.get("/:userId", getEmployDetailById);
+router.get("/:userId", authenticateUser, getEmployDetailById);
 
 router.patch(
   "/status/:userId",
