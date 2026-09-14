@@ -258,7 +258,7 @@ export const getResignationByUserId = async (
   next: NextFunction,
 ) => {
   try {
-    const  id  = req.params.userId;
+    const id = req.params.userId;
 
     const resignation = await ResignationModel.findOne({
       userId: id,
@@ -343,14 +343,19 @@ export const updateResignationStatus = async (
       return res.status(404).json(ApiResponse.error("Resignation not found"));
     }
 
-    if (status !== resignationStatus.CANCELED && id.toString() === resignation.userId.toString()) {
+    if (
+      status !== resignationStatus.CANCELED &&
+      id.toString() === resignation.userId.toString()
+    ) {
       return res
         .status(404)
         .json(ApiResponse.error("Cannot update own Resignation"));
     }
 
     resignation.status = status;
-    resignation.lastWorkingDate = lastWorkingDate ? new Date(lastWorkingDate): null;
+    resignation.lastWorkingDate = lastWorkingDate
+      ? new Date(lastWorkingDate)
+      : null;
 
     await addUserHistory({
       userId: req.user!.id as string,

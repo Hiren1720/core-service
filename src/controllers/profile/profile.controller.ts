@@ -33,7 +33,7 @@ export const updateCompanyDetail = async (
       companyEmail,
       companyPhone,
       companyAddress,
-
+      companyWebsite,
       firstName,
       lastName,
       email,
@@ -51,6 +51,7 @@ export const updateCompanyDetail = async (
     if (companyPhone !== undefined) company.companyPhone = companyPhone;
 
     if (companyAddress !== undefined) company.companyAddress = companyAddress;
+    if (companyWebsite !== undefined) company.companyWebsite = companyWebsite;
 
     // Representative fields
     if (firstName !== undefined) representative.firstName = firstName;

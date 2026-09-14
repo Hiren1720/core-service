@@ -29,7 +29,7 @@ export const workforceOverview = async (
 ) => {
   try {
     const { role } = req.user!;
-    
+
     let companyId;
     if (role === "ADMIN") {
       companyId = new mongoose.Types.ObjectId(req.query.companyId as string);
@@ -200,10 +200,12 @@ export const attendanceOverview = async (
     let totalPresent = 0;
     let totalAbsent = 0;
     let totalManual = 0;
+    let manualList = [];
 
     for (const attendance of attendances) {
       if (attendance.isManualPunchIn || attendance.isManualPunchOut) {
         totalManual++;
+        manualList.push(attendance);
         continue;
       }
 
@@ -226,7 +228,7 @@ export const attendanceOverview = async (
           totalAbsent,
           totalPresent,
           totalManual,
-          attendanceList: attendances,
+          attendanceList: manualList,
           leavesList: leaves,
         },
         "Attendance overview fetched",
