@@ -12,7 +12,7 @@ export const getAttendanceByDate = async (
   next: NextFunction,
 ) => {
   try {
-    const { date } = req.query;
+    const { date, status } = req.query;
 
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -29,6 +29,14 @@ export const getAttendanceByDate = async (
       companyId: req.user!.companyId,
       attendanceDate: normalizeDate(new Date(date as string)),
     };
+
+    if (status === "PRESENT") {
+      filter.attendanceStatus = attendanceType.PRESENT;
+    } else if (status === "ABSENT") {
+      filter.attendanceStatus = attendanceType.ABSENT;
+    } else if (status === "LEAVE") {
+      filter.leaveRequestId = { $ne: null };
+    }
 
     const [result, count] = await Promise.all([
       AttendanceModel.find(filter)
