@@ -238,7 +238,11 @@ export const getTerminationById = async (
     const termination = await TerminationModel.findOne({
       _id: req.params.terminationId,
       companyId: req.user!.companyId,
-    }).populate("userId", "firstName lastName role profileImage");
+    }).populate({
+      path: "userId",
+      select: "firstName lastName role profileImage createdAt",
+      populate: { path: "designationId", select: "name" },
+    });
 
     if (!termination) {
       return res.status(404).json(ApiResponse.error("Termination not found"));
