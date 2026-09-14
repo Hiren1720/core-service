@@ -3,7 +3,7 @@ import { authenticateUser } from "../../middleware/user.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   createResignation,
-  getResignationById,
+  getResignationByUserId,
   getResignations,
   getResignationCount,
   updateResignation,
@@ -19,11 +19,11 @@ router.post(
   createResignation,
 );
 
-router.get("/", authenticateUser, getResignations);
+router.get("/", authenticateUser,  authorize("OWNER", "EMPLOYEE"), getResignations);
 
 router.get("/count", authenticateUser, getResignationCount);
 
-router.get("/:resignationId", authenticateUser, getResignationById);
+router.get("/:userId", authenticateUser, getResignationByUserId);
 
 router.put(
   "/:resignationId",
@@ -35,7 +35,6 @@ router.put(
 router.patch(
   "/status/:resignationId",
   authenticateUser,
-  authorize("OWNER", "MANAGER"),
   updateResignationStatus,
 );
 

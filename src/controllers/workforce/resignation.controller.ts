@@ -19,7 +19,7 @@ export const createResignation = async (
 ) => {
   try {
     const { id: assignedBy } = req.user!;
-    const { userId, lastWorkingDate, reason } = req.body;
+    const { userId, reason } = req.body;
 
     const existing = await ResignationModel.findOne({ userId })
       .lean()
@@ -31,27 +31,47 @@ export const createResignation = async (
         .json(ApiResponse.error("Last resignation still in pending state"));
     }
 
-    const resignation = await ResignationModel.create({
-      companyId: req.user!.companyId,
-      userId,
-      lastWorkingDate: normalizeDate(lastWorkingDate),
-      reason,
-    });
+    if (existing) {
+      await ResignationModel.findByIdAndUpdate(existing?._id, {
+        lastWorkingDate: null,
+        status: resignationStatus.PENDING,
+        reason,
+        mailSent: false,
+        mailSentAt: null,
+      });
 
-    await addUserHistory({
-      userId: userId,
-      field: "resignationStatus",
-      fieldId: resignation._id.toString(),
-      fieldValue: resignationStatus.PENDING,
-      remarks: "",
-      assignedBy,
-    });
+      await addUserHistory({
+        userId: userId,
+        field: "resignationStatus",
+        fieldId: existing._id.toString(),
+        fieldValue: resignationStatus.PENDING,
+        remarks: "",
+        assignedBy,
+      });
+      return res
+        .status(201)
+        .json(ApiResponse.success(null, "Resignation created successfully"));
+    } else {
+      const resignation = await ResignationModel.create({
+        companyId: req.user!.companyId,
+        userId,
+        reason,
+      });
 
-    return res
-      .status(201)
-      .json(
-        ApiResponse.success(resignation, "Resignation created successfully"),
-      );
+      await addUserHistory({
+        userId: userId,
+        field: "resignationStatus",
+        fieldId: resignation._id.toString(),
+        fieldValue: resignationStatus.PENDING,
+        remarks: "",
+        assignedBy,
+      });
+      return res
+        .status(201)
+        .json(
+          ApiResponse.success(resignation, "Resignation created successfully"),
+        );
+    }
   } catch (error) {
     next(error);
   }
@@ -78,6 +98,7 @@ export const getResignations = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      status: { $ne: resignationStatus.CANCELED },
     };
 
     if (role === "EMPLOYEE") {
@@ -195,6 +216,7 @@ export const getResignationCount = async (
 
     const filter: any = {
       companyId: req.user!.companyId,
+      status: { $ne: resignationStatus.CANCELED },
     };
 
     if (role === "EMPLOYEE") {
@@ -235,16 +257,28 @@ export const getResignationCount = async (
   }
 };
 
-export const getResignationById = async (
+export const getResignationByUserId = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
+    const { id } = req.user!;
+
     const resignation = await ResignationModel.findOne({
-      _id: req.params.resignationId,
-      companyId: req.user!.companyId,
-    }).populate("userId", "firstName lastName role profileImage");
+      userId: id,
+    }).populate({
+      path: "userId",
+      select: "firstName lastName role profileImage createdAt",
+      populate: [
+        {
+          path: "branchId",
+          select: "name",
+        },
+        { path: "designationId", select: "name" },
+        { path: "shiftId", select: "name startTime endTime" },
+      ],
+    });
 
     if (!resignation) {
       return res.status(404).json(ApiResponse.error("Resignation not found"));
@@ -301,7 +335,7 @@ export const updateResignationStatus = async (
 ) => {
   try {
     const { id } = req.user!;
-    const { status, remarks } = req.body;
+    const { status, lastWorkingDate, remarks } = req.body;
     const assignedBy = req.user!.id;
 
     const resignation = await ResignationModel.findOne({
@@ -320,6 +354,7 @@ export const updateResignationStatus = async (
     }
 
     resignation.status = status;
+    resignation.lastWorkingDate = new Date(lastWorkingDate);
 
     await addUserHistory({
       userId: req.user!.id as string,

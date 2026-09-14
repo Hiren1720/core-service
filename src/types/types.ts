@@ -35,6 +35,7 @@ export enum resignationStatus {
   PENDING = "PENDING",
   ACCEPTED = "ACCEPTED",
   REJECTED = "REJECTED",
+  CANCELED = "CANCELED",
 }
 
 export enum payslipValueType {
