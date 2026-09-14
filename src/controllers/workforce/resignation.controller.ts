@@ -25,11 +25,6 @@ export const createResignation = async (
       .lean()
       .select("status")
       .sort({ createdAt: -1 });
-    if (existing?.status === resignationStatus.PENDING) {
-      return res
-        .json(400)
-        .json(ApiResponse.error("Last resignation still in pending state"));
-    }
 
     if (existing) {
       await ResignationModel.findByIdAndUpdate(existing?._id, {
