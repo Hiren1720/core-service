@@ -19,7 +19,6 @@ const ResignationSchema = new Schema(
     lastWorkingDate: {
       type: Date,
       default: null,
-      required: true,
     },
 
     reason: {
