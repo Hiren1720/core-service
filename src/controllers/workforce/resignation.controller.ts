@@ -348,7 +348,7 @@ export const updateResignationStatus = async (
       return res.status(404).json(ApiResponse.error("Resignation not found"));
     }
 
-    if (id.toString() === resignation.userId.toString()) {
+    if (status !== resignationStatus.CANCELED && id.toString() === resignation.userId.toString()) {
       return res
         .status(404)
         .json(ApiResponse.error("Cannot update own Resignation"));
