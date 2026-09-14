@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import {
+  CompanyModel,
   UserAssignmentModel,
   UserDetailModel,
   UserModel,
@@ -297,9 +298,14 @@ export const getEmployeeById = async (
   next: NextFunction,
 ) => {
   try {
+    const { companyId } = req.user!;
     const { userId } = req.params;
 
-    const [user, assignments, policy, payslip] = await Promise.all([
+    const [company, user, assignments, policy, payslip] = await Promise.all([
+      CompanyModel.findById(companyId)
+        .select("-employeePrice -productionPrice -assignedBankAccount")
+        .lean(),
+
       UserModel.findById(userId).populate("designationId", "name _id").lean(),
 
       UserAssignmentModel.findOne({ userId })
@@ -353,6 +359,7 @@ export const getEmployeeById = async (
     return res.status(200).json(
       ApiResponse.success(
         {
+          company,
           user,
           assignments,
           policy,
