@@ -258,7 +258,7 @@ export const getResignationByUserId = async (
   next: NextFunction,
 ) => {
   try {
-    const { id } = req.user!;
+    const  id  = req.params.userId;
 
     const resignation = await ResignationModel.findOne({
       userId: id,
