@@ -405,14 +405,14 @@ export const sendResignationAcceptedMail = async (
     const senderName = `${sender.firstName} ${sender.lastName}`.trim();
 
     const lastWorkingDay =
-      resignation.lastWorkingDate.toLocaleDateString("en-GB");
+      resignation.lastWorkingDate?.toLocaleDateString("en-GB");
 
     await sendMail({
       to: beneficiaryEmail,
       subject: "Resignation Accepted",
       html: resignationAcceptedTemplate({
         employeeName: beneficiaryName,
-        lastWorkingDay,
+        lastWorkingDay: lastWorkingDay || "",
         managerName: senderName,
         managerDesignation: sender.role,
       }),
