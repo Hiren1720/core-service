@@ -330,3 +330,30 @@ export const updateOfficeExpenseStatus = async (
     next(error);
   }
 };
+
+export const deleteOfficeExpense = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const officeExpenseId = req.params.officeExpenseId;
+
+    const officeExpense = await OfficeExpenseModel.findById(officeExpenseId);
+    if (!officeExpense || officeExpense.status !== "PENDING") {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Office expense not found"));
+    }
+
+    await OfficeExpenseModel.findByIdAndDelete(officeExpenseId);
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(null, "Office expense Deleted successfully"),
+      );
+  } catch (error) {
+    next(error);
+  }
+};

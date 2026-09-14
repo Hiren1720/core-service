@@ -576,3 +576,31 @@ export const getLeaveApplicationById = async (
     next(error);
   }
 };
+
+export const deleteLeaveRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const leaveRequestId = req.params.leaveRequestId;
+
+    const leaveRequest = await LeaveRequestModel.findById(leaveRequestId);
+    if (!leaveRequest || leaveRequest.status !== "PENDING") {
+      return res
+        .status(404)
+        .json(ApiResponse.error("Pending leave application not found"));
+    }
+
+    await LeaveRequestModel.findByIdAndDelete(leaveRequestId);
+
+    return res
+      .status(200)
+      .json(
+        ApiResponse.success(null, "Leave application Deleted successfully"),
+      );
+    // await UserLeaveBalanceModel.findOneAndUpdate(leaveRequest.leaveId, {})
+  } catch (error) {
+    next(error);
+  }
+};

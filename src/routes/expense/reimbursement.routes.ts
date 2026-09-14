@@ -3,6 +3,7 @@ import { authenticateUser } from "../../middleware/user.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   createReimbursement,
+  deleteReimursement,
   getReimbursementById,
   getReimbursements,
   getReimbursementsCount,
@@ -40,6 +41,12 @@ router.get(
   "/:reimbursementId",
   authenticateUser,
   getReimbursementById,
+);
+
+router.delete(
+  "/:reimbursementId",
+  authenticateUser,
+  deleteReimursement,
 );
 
 router.patch(

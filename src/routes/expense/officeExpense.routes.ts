@@ -3,6 +3,7 @@ import { authenticateUser } from "../../middleware/user.middleware.js";
 import { authorize } from "../../middleware/authorize.middleware.js";
 import {
   createOfficeExpense,
+  deleteOfficeExpense,
   getOfficeExpenseById,
   getOfficeExpenses,
   getOfficeExpensesCount,
@@ -30,6 +31,12 @@ router.get("/", authenticateUser, getOfficeExpenses);
 router.get("/count", authenticateUser, getOfficeExpensesCount);
 
 router.get("/:officeExpenseId", authenticateUser, getOfficeExpenseById);
+
+router.delete(
+  "/:officeExpenseId",
+  authenticateUser,
+  deleteOfficeExpense,
+);
 
 router.patch(
   "/status/:officeExpenseId",

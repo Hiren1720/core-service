@@ -349,3 +349,26 @@ export const updateReimbursementStatus = async (
     next(error);
   }
 };
+
+export const deleteReimursement = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const reimbursementId = req.params.reimbursementId;
+
+    const reimbursement = await ReimbursementModel.findById(reimbursementId);
+    if (!reimbursement || reimbursement.status !== "PENDING") {
+      return res.status(404).json(ApiResponse.error("Reimbursement not found"));
+    }
+
+    await ReimbursementModel.findByIdAndDelete(reimbursementId);
+
+    return res
+      .status(200)
+      .json(ApiResponse.success(null, "Reimbursement Deleted successfully"));
+  } catch (error) {
+    next(error);
+  }
+};
