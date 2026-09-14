@@ -276,6 +276,7 @@ export const getResignationByUserId = async (
           select: "name",
         },
         { path: "designationId", select: "name" },
+        { path: "departmentId", select: "name" },
         { path: "shiftId", select: "name startTime endTime" },
       ],
     });
