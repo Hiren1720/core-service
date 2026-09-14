@@ -19,7 +19,7 @@ router.post(
   createResignation,
 );
 
-router.get("/", authenticateUser,  authorize("OWNER", "EMPLOYEE"), getResignations);
+router.get("/", authenticateUser,  authorize("OWNER", "MANAGER"), getResignations);
 
 router.get("/count", authenticateUser, getResignationCount);
 
