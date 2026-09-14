@@ -252,8 +252,12 @@ export const getEmployDetailById = async (
   next: NextFunction,
 ) => {
   try {
+    const { companyId } = req.user!;
     const { userId } = req.params;
 
+    const company = await CompanyModel.findById(companyId)
+      .select("-employeePrice -productionPrice -assignedBankAccount")
+      .lean();
     const user = await UserModel.findById(userId).lean();
     const userDetails = await UserDetailModel.findOne({ userId }).lean();
 
@@ -261,7 +265,7 @@ export const getEmployDetailById = async (
       .status(200)
       .json(
         ApiResponse.success(
-          { user, userDetails },
+          { company, user, userDetails },
           "Employee fetched successfully",
         ),
       );
