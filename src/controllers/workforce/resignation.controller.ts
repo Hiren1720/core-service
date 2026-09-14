@@ -269,7 +269,7 @@ export const getResignationByUserId = async (
       userId: id,
     }).populate({
       path: "userId",
-      select: "firstName lastName role profileImage createdAt",
+      select: "userId firstName lastName role profileImage createdAt",
       populate: [
         {
           path: "branchId",
