@@ -350,7 +350,7 @@ export const updateResignationStatus = async (
     }
 
     resignation.status = status;
-    resignation.lastWorkingDate = new Date(lastWorkingDate);
+    resignation.lastWorkingDate = lastWorkingDate ? new Date(lastWorkingDate): null;
 
     await addUserHistory({
       userId: req.user!.id as string,
