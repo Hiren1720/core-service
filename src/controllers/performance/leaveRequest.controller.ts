@@ -132,7 +132,7 @@ export const applyLeave = async (
           startDate: leaveDate,
           endDate: leaveDate,
           maxLeaves: policy.continuousLeave?.enabled
-            ? 0
+            ? 1
             : policy.continuousLeave.maxLeaves,
           enabled: policy.continuousLeave.enabled,
         },

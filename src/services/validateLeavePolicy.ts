@@ -88,7 +88,8 @@ export const validateLeaveOverlap = async (
     },
   };
 
-  const existingLeave = await LeaveRequestModel.findOne(filter).session(session);
+  const existingLeave =
+    await LeaveRequestModel.findOne(filter).session(session);
   if (existingLeave) {
     throw new Error("Leave already exists for selected dates");
   }
@@ -108,7 +109,7 @@ export const validateContinuousLeave = async (
 ) => {
   const previousLeaves = await LeaveRequestModel.find({
     userId,
-    status: leaveStatusType.APPROVED,
+    status: { $ne: leaveStatusType.REJECTED },
 
     endDate: {
       $gte: new Date(startDate.getTime() - maxLeaves * 86400000),
@@ -117,8 +118,10 @@ export const validateContinuousLeave = async (
     startDate: {
       $lte: new Date(endDate.getTime() + maxLeaves * 86400000),
     },
-  }).select("startDate endDate").session(session);
-
+  })
+    .select("startDate endDate")
+    .session(session);
+ 
   const leaveDates = new Set<string>();
 
   for (const leave of previousLeaves) {
@@ -147,7 +150,6 @@ export const validateContinuousLeave = async (
 
     if (diff === 1) {
       consecutive++;
-
       if (consecutive > maxLeaves) {
         throw new Error(
           `Maximum ${maxLeaves} continuous leave(s) are allowed.`,
