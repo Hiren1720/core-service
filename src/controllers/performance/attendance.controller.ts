@@ -174,7 +174,7 @@ export const getManualPunchList = async (
         $gte: startDate,
         $lte: endDate,
       },
-      $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
+      $or: [{ isManualPunchIn: true}, {isManualPunchOut: true }],
     };
 
     if (role === "EMPLOYEE") {

@@ -75,7 +75,7 @@ export const punchOut = async (
       method,
       session,
       null,
-      false
+      false,
     );
 
     await session.commitTransaction();
@@ -112,6 +112,18 @@ export const manualPunch = async (
         );
     }
 
+    const startDate = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1 - 1,
+      1,
+    );
+    const endDate = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      0,
+    );
+    endDate.setHours(23, 59, 59, 999);
+
     const [policy, manualCount]: any = await Promise.all([
       UserPolicyModel.findOne({
         userId,
@@ -136,7 +148,11 @@ export const manualPunch = async (
 
       AttendanceModel.countDocuments({
         userId,
-        $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
+        $or: [{ isManualPunchIn: true},{ isManualPunchOut: true }],
+        attendanceDate: {
+          $gte: startDate,
+          $lte: endDate,
+        },
       }),
     ]);
 
@@ -164,11 +180,18 @@ export const manualPunch = async (
       }
     }
 
-    const attendanceOut = await PunchOutFn(userId, null, method, session, {
-      date: manual.date,
-      inTime: manual.inTime,
-      outTime: manual.outTime,
-    }, false);
+    const attendanceOut = await PunchOutFn(
+      userId,
+      null,
+      method,
+      session,
+      {
+        date: manual.date,
+        inTime: manual.inTime,
+        outTime: manual.outTime,
+      },
+      false,
+    );
     if (attendanceOut && manual.outTime) {
       attendanceOut.manualPunchOutBy = new mongoose.Types.ObjectId(id);
       attendanceOut.isManualPunchOut = true;
@@ -269,7 +292,10 @@ export const getAttendanceByMonth = async (
 
     const [attendanceRecords, generatedDays] = await Promise.all([
       AttendanceModel.find(filter)
-        .populate("userId", "firstName lastName profileImage role status userId")
+        .populate(
+          "userId",
+          "firstName lastName profileImage role status userId",
+        )
         .populate([
           {
             path: "leaveRequestId",
