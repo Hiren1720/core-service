@@ -2,6 +2,7 @@ import { leaveStatusType } from "../types/types";
 import {
   UserPolicyModel,
   LeaveRequestModel,
+  UserModel,
 } from "../infrastructure/database/models";
 import { ClientSession } from "mongoose";
 
@@ -44,6 +45,15 @@ export const validateLeavePolicy = async ({
 
   if (!policy) {
     throw new Error("Policy not found");
+  }
+  const user = await UserModel.findById(userId).select("probationPeriod");
+
+  if (
+    user?.probationPeriod &&
+    policy.continuousLeave.enabled &&
+    !policy.continuousLeave.allowedInProbation
+  ) {
+    throw new Error("Leaves not alllowed in probation");
   }
 
   const leavePolicy = policy.leaves.find(
@@ -121,7 +131,7 @@ export const validateContinuousLeave = async (
   })
     .select("startDate endDate")
     .session(session);
- 
+
   const leaveDates = new Set<string>();
 
   for (const leave of previousLeaves) {
