@@ -404,7 +404,7 @@ export const PunchOutFn = async (
   } else if (isAutoClose) {
     outTime = applicableEnd;
   } else {
-    outTime = now;
+    outTime = attendance.outTime ? attendance.outTime : now; // condition for manual punch should not overwrite
   }
 
   // ========================================================

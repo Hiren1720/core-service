@@ -113,13 +113,13 @@ export const manualPunch = async (
     }
 
     const startDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1 - 1,
+      manual.date.split("-")[0],
+      manual.date.split("-")[1] - 1,
       1,
     );
     const endDate = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
+      manual.date.split("-")[0],
+      manual.date.split("-")[1],
       0,
     );
     endDate.setHours(23, 59, 59, 999);
@@ -148,7 +148,7 @@ export const manualPunch = async (
 
       AttendanceModel.countDocuments({
         userId,
-        $or: [{ isManualPunchIn: true},{ isManualPunchOut: true }],
+        $or: [{ isManualPunchIn: true }, { isManualPunchOut: true }],
         attendanceDate: {
           $gte: startDate,
           $lte: endDate,
