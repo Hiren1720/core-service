@@ -106,8 +106,6 @@ export const validateContinuousLeave = async (
   { userId, startDate, endDate, maxLeaves, enabled }: ValidateContinuousProps,
   session: ClientSession | null,
 ) => {
-  if (!enabled) return;
-
   const previousLeaves = await LeaveRequestModel.find({
     userId,
     status: leaveStatusType.APPROVED,

@@ -126,19 +126,18 @@ export const applyLeave = async (
       // --------------------------------------------------
       // Continuous leave rule
       // --------------------------------------------------
-
-      if (policy.continuousLeave?.enabled) {
-        await validateContinuousLeave(
-          {
-            userId,
-            startDate: leaveDate,
-            endDate: leaveDate,
-            maxLeaves: policy.continuousLeave.maxLeaves,
-            enabled: policy.continuousLeave.enabled,
-          },
-          session,
-        );
-      }
+      await validateContinuousLeave(
+        {
+          userId,
+          startDate: leaveDate,
+          endDate: leaveDate,
+          maxLeaves: policy.continuousLeave?.enabled
+            ? 0
+            : policy.continuousLeave.maxLeaves,
+          enabled: policy.continuousLeave.enabled,
+        },
+        session,
+      );
 
       // --------------------------------------------------
       // Validate balance for this particular leave type
