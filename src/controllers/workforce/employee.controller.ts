@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import {
-  CompanyModel,
   UserAssignmentModel,
   UserDetailModel,
   UserModel,
@@ -13,6 +12,7 @@ import { saveFile } from "../../shared/services/file.service";
 import { status, userStatus } from "../../types/types";
 import { getMyManagedUserIdList } from "../../shared/services/users.service";
 import { addUserHistory } from "../../shared/services/userHistory.service";
+import { downloadCsv } from "../../shared/utils/csvDownload";
 
 export const editUserDetail = async (
   req: Request,
@@ -178,6 +178,10 @@ export const getEmployeeList = async (
     const shiftId = req.query.shiftId?.toString();
     const departmentId = req.query.departmentId?.toString();
     const roleFilter = req.query.role?.toString();
+    const isDownload = req.query.isDownload === "true";
+    const csvPassword = req.query.csvPassword
+      ? String(req.query.csvPassword)
+      : undefined;
 
     const skip = (page - 1) * limit;
 
@@ -215,22 +219,40 @@ export const getEmployeeList = async (
       filter.status = status;
     }
 
-    const [employee, total] = await Promise.all([
-      UserModel.find(filter)
-        .select("firstName lastName role profileImage status userId")
-        .populate("branchId", "name")
-        .populate("shiftId", "name startTime endTime")
-        .populate("designationId", "name")
-        .populate("departmentId", "name")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+    const empQ = UserModel.find(filter)
+      .select("firstName lastName role profileImage status userId")
+      .populate("branchId", "name")
+      .populate("shiftId", "name startTime endTime")
+      .populate("designationId", "name")
+      .populate("departmentId", "name")
+      .sort({
+        createdAt: -1,
+      })
+      .lean();
 
+    if (!isDownload) {
+      empQ.skip(skip).limit(limit);
+    }
+
+    const [employee, total] = await Promise.all([
+      empQ,
       UserModel.countDocuments(filter),
     ]);
+
+    if (isDownload) {
+      const data = employee.map((emp: any) => ({
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        role: emp.role,
+        status: emp.status,
+        branch: emp.branchId.name,
+        shift: emp.shiftId.name,
+        designation: emp.designationId.name,
+        department: emp.departmentId.name,
+      }));
+
+      return downloadCsv(res, data, "employee", csvPassword);
+    }
 
     return res.status(200).json(
       ApiResponse.success(
