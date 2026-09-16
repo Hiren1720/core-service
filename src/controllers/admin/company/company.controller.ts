@@ -8,7 +8,10 @@ import { UserModel } from "../../../infrastructure/database/models/user.model.js
 import { ApiResponse } from "../../../shared/response/api-response.js";
 import { saveFile } from "../../../shared/services/file.service.js";
 import { userStatus } from "../../../types/types.js";
-import { defaultDeduction, defaultPayslip } from "../../../shared/helpers/defaultDeduction.js";
+import {
+  defaultDeduction,
+  defaultPayslip,
+} from "../../../shared/helpers/defaultDeduction.js";
 import { renderEmailTemplate } from "../../../shared/templates/index.js";
 import { sendMail } from "../../../shared/services/mail.service.js";
 import { generateUserUniqueUserId } from "../../../shared/helpers/generateUserId.js";
@@ -95,7 +98,8 @@ export const createCompany = async (
     );
 
     const password =
-      firstName.trim().toLowerCase() + "@" + new Date().getFullYear(); // Default password (should be changed by user)
+      firstName.trim().slice(0, 2).toLowerCase() +
+      Math.floor(1000 + Math.random() * 9000); // Default password (should be changed by user)
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userId = await generateUserUniqueUserId(

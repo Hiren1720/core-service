@@ -78,7 +78,8 @@ export const createEmployee = async (
     }
 
     const password =
-      firstName.trim().toLowerCase() + "@" + new Date().getFullYear(); // Default password (should be changed by user)
+      firstName.trim().slice(0, 2).toLowerCase() +
+      Math.floor(1000 + Math.random() * 9000);
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const uniqueId = await generateUserUniqueUserId(companyId, session);
