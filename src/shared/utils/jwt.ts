@@ -18,7 +18,7 @@ export const generateAccessToken = (
         payload,
         env.JWT_ACCESS_SECRET,
         {
-            expiresIn: "30d",
+            expiresIn: "1d",
         }
     );
 };
