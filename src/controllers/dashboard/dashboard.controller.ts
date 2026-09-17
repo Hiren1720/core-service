@@ -329,7 +329,7 @@ export const myLeaveAndManualPunch = async (
           $gte: startDate,
           $lte: endDate,
         },
-        $or: [{ isManualPunchIn: true, isManualPunchOut: true }],
+        $or: [{ isManualPunchIn: true}, {isManualPunchOut: true }],
       })
         .select(
           "attendanceDate inTime outTime  attendanceStatus  totalWorkedMinutes  isManualPunchIn isManualPunchOut",
