@@ -22,7 +22,11 @@ export const generatePreviousMonthInvoice = async ({
   const totalMonthDays = new Date(year, month, 0).getDate();
 
   const companies = await CompanyModel.find({
-    status: status.ACTIVE,
+    $or: [
+      { unusedAt: { $exists: false } },
+      { unusedAt: null },
+      { unusedAt: { $gte: startDate } },
+    ],
   })
     .select("_id employeePrice")
     .lean();
@@ -89,7 +93,6 @@ export const generatePreviousMonthInvoice = async ({
        * employees, we can add that separately.
        */
       for (const period of employee.activePeriods || []) {
-       
         if (!period.from || !period.to) {
           continue;
         }
@@ -250,8 +253,13 @@ const processCompanyMonthlySnapshot = async ({
   const users = await UserModel.find({
     companyId,
     status: {
-      $in: [userStatus.ACTIVE, userStatus.INACTIVE, userStatus.DELETED],
+      $nin: [userStatus.PENDING, userStatus.REJECTED],
     },
+    $or: [
+      { unusedAt: { $exists: false } },
+      { unusedAt: null },
+      { unusedAt: { $gte: startDate } },
+    ],
   })
     .select("_id companyId")
     .lean();

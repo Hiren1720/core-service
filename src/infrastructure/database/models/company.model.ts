@@ -71,6 +71,12 @@ const CompanySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+
+    unusedAt: {
+      // we set while make inactive or delete
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

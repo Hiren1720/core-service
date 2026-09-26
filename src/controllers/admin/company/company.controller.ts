@@ -630,10 +630,26 @@ export const companyStatusChange = async (
     if (!owner) {
       return res.status(404).json(ApiResponse.error("Owner not found"));
     }
+    const company = await CompanyModel.findOne({
+      companyRepresentative: req.params.userId,
+    });
+
+    if (!company) {
+      return res.status(404).json(ApiResponse.error("Company not found"));
+    }
+
+    const unusedAt = new Date();
 
     // Update owner status
     await UserModel.findByIdAndUpdate(owner._id, {
       status,
+    });
+
+    await CompanyModel.findByIdAndUpdate(company._id, {
+      $set: {
+        status,
+        unusedAt: null,
+      },
     });
 
     // Owner inactive → deactivate all active employees/managers

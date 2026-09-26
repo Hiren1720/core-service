@@ -124,6 +124,12 @@ const UserSchema = new Schema(
       type: String,
       default: "",
     },
+
+    unusedAt: {
+      // we set while make inactive or delete
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

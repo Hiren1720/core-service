@@ -337,6 +337,7 @@ const calculateAttendancePayroll = ({
   let weeklyOffDays = 0;
   let holidays = 0;
   let paidLeaveDays = 0;
+  let unPaidLeaveDays = 0;
 
   let lateMinutes = 0;
   let earlyExitMinutes = 0;
@@ -398,7 +399,11 @@ const calculateAttendancePayroll = ({
       // ABSENT  -> 0.5 leave + 0.5 absent
       // ---------------------------------------------
       else {
-        paidLeaveDays += 0.5;
+        if (record.leaveRequestId?.leaveId?.isPaid) {
+          paidLeaveDays += 0.5;
+        } else {
+          unPaidLeaveDays += 0.5;
+        }
 
         if (status === attendanceType.PRESENT) {
           presentDays += 0.5;
@@ -428,7 +433,11 @@ const calculateAttendancePayroll = ({
 
     if (status === attendanceType.LEAVE) {
       if (record.leaveRequestId) {
-        paidLeaveDays += 1;
+        if (record.leaveRequestId?.leaveId?.isPaid) {
+          paidLeaveDays += 1;
+        } else {
+          unPaidLeaveDays += 1;
+        }
       } else {
         absentDays += 1;
       }
@@ -550,6 +559,7 @@ const calculateAttendancePayroll = ({
       weeklyOffDays,
       holidays,
       paidLeaveDays,
+      unPaidLeaveDays,
       lateMinutes,
       earlyExitMinutes,
       overtimeMinutes,
@@ -578,8 +588,13 @@ export const buildPaymentEarnings = ({
 } => {
   const earnings: EarningDeduction[] = [];
   const deductions: EarningDeduction[] = [];
-  const { overtimeMinutes, absentDays, lateSalaryCutDays, sandwichDays } =
-    attendanceResult.summary;
+  const {
+    overtimeMinutes,
+    absentDays,
+    unPaidLeaveDays,
+    lateSalaryCutDays,
+    sandwichDays,
+  } = attendanceResult.summary;
 
   const {
     overtime: { overtimeRate },
@@ -595,6 +610,8 @@ export const buildPaymentEarnings = ({
 
   const absentDaysSalary = dailySalary * absentDays;
 
+  const unPaidLeaveDaysSalary = dailySalary * unPaidLeaveDays;
+
   const lateMarkDaySalary = dailySalary * lateSalaryCutDays;
 
   const sandwichDaysSalary = dailySalary * sandwichDays;
@@ -603,6 +620,7 @@ export const buildPaymentEarnings = ({
     salary +
     overtimeAmount -
     absentDaysSalary -
+    unPaidLeaveDaysSalary -
     lateMarkDaySalary -
     sandwichDaysSalary;
 
@@ -649,6 +667,21 @@ export const buildPaymentEarnings = ({
       source: "ATTENDANCE",
       metadata: {
         absentDays: absentDays,
+      },
+    });
+  }
+
+  // unpaid leaves days
+  if (unPaidLeaveDaysSalary > 0) {
+    deductions.push({
+      type: "LEAVE",
+      name: "unpaid leave",
+      isDeduction: true,
+      amount: unPaidLeaveDaysSalary,
+      calculation: `${unPaidLeaveDays} days unpaid leave`,
+      source: "ATTENDANCE",
+      metadata: {
+        unPaidLeaveDays: unPaidLeaveDays,
       },
     });
   }
@@ -826,7 +859,13 @@ const getMonthlyAttendance = async (
       $gte: periodStart,
       $lte: periodEnd,
     },
-  }).lean();
+  })
+    .populate({
+      path: "leaveRequestId",
+      select: "duration leaveId ",
+      populate: { path: "leaveId", select: "isPaid" },
+    })
+    .lean();
 };
 
 export const calculateReimbursements = (

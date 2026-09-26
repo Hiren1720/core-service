@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "../../../shared/response/api-response";
 import {
   AdminModel,
+  CompanyModel,
   InvoiceModel,
   MonthlyEmployeeSnapshotModel,
 } from "../../../infrastructure/database/models";
@@ -34,7 +35,9 @@ export const getCompanyEmployeeStatusHistory = async (
 
     const skip = (page - 1) * limit;
 
-    const [list, total] = await Promise.all([
+    const [company, list, total] = await Promise.all([
+      CompanyModel.findById(companyId).select("employeePrice").lean(),
+
       MonthlyEmployeeSnapshotModel.find({
         year,
         month,
@@ -58,7 +61,7 @@ export const getCompanyEmployeeStatusHistory = async (
       .status(200)
       .json(
         ApiResponse.success(
-          { list, total },
+          { list, employeePrice: company?.employeePrice || 0, total },
           "Employee status history fetched successfully",
         ),
       );

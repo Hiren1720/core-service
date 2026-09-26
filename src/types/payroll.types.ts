@@ -9,6 +9,7 @@ export interface AttendancePayrollResult {
     weeklyOffDays: number;
     holidays: number;
     paidLeaveDays: number;
+    unPaidLeaveDays: number;
     lateMinutes: number;
     earlyExitMinutes: number;
     lateCount: number;

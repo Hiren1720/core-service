@@ -628,7 +628,12 @@ export const employeeStatusChange = async (
     await UserModel.findByIdAndUpdate(user._id, { status: status });
 
     if (status === userStatus.INACTIVE || status === userStatus.DELETED) {
+      user.unusedAt = new Date();
+      await user.save();
       await UserSessionModel.deleteMany({ userId: user._id });
+    } else {
+      user.unusedAt = null;
+      await user.save();
     }
 
     await addUserHistory({
