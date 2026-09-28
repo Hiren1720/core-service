@@ -655,6 +655,15 @@ export const assignRolesResponsibility = async (
         subject: `Welcome to IEKA - Your Account Details`,
         html,
       });
+
+      await addUserHistory({
+        userId: user._id.toString(),
+        field: "userStatus",
+        fieldId: user._id.toString(),
+        fieldValue: "ACTIVE",
+        remarks: "",
+        assignedBy,
+      });
     }
     //reporting assignments
     const reportingAssignment =
