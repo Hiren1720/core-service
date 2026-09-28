@@ -528,6 +528,7 @@ export const updateEmployeeSalary = async (
     // 4. Create new salary record
     const newPayslip = await UserPayslipModel.create({
       salary,
+      userId,
       effectiveFromMonth,
       effectiveFromYear,
       assignedBy: id,
