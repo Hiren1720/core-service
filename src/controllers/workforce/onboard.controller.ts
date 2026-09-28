@@ -216,19 +216,6 @@ export const createEmployee = async (
       { session },
     );
 
-    const html = renderEmailTemplate("onboarding", {
-      companyName: "IEKA",
-      userName: firstName + " " + lastName,
-      userId: uniqueId,
-      password: password,
-    });
-
-    await sendMail({
-      to: user.email,
-      subject: `Welcome to IEKA - Your Account Details`,
-      html,
-    });
-
     await session.commitTransaction();
 
     return res
@@ -651,6 +638,23 @@ export const assignRolesResponsibility = async (
     // user status
     if (user.status === "PENDING" || user.status === "REJECTED") {
       user.status = "ACTIVE" as userStatus;
+
+      const password =
+        user.firstName.trim().slice(0, 2).toLowerCase() +
+        Math.floor(1000 + Math.random() * 9000);
+
+      const html = renderEmailTemplate("onboarding", {
+        companyName: "IEKA",
+        userName: user.firstName + " " + user.lastName,
+        userId: user.userId,
+        password: password,
+      });
+
+      await sendMail({
+        to: user.email,
+        subject: `Welcome to IEKA - Your Account Details`,
+        html,
+      });
     }
     //reporting assignments
     const reportingAssignment =
