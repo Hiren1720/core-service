@@ -479,6 +479,9 @@ export const assignRolesResponsibility = async (
       });
     }
 
+    console.log("salary && payslipId && !currentPayslip",
+      salary , payslipId , currentPayslip
+    )
     // Payslip
     if (salary && payslipId && !currentPayslip) {
       operations.push(
