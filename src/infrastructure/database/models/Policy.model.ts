@@ -4,24 +4,27 @@ import { status } from "../../../types/types";
 /* ---------------- Work Hours ---------------- */
 const WorkHourSchema = new Schema(
   {
-    weeklyOffs: [
-      {
-        type: String,
-        enum: [
-          "MONDAY",
-          "TUESDAY",
-          "WEDNESDAY",
-          "THURSDAY",
-          "FRIDAY",
-          "1stSATURDAY",
-          "2ndSATURDAY",
-          "3rdSATURDAY",
-          "4thSATURDAY",
-          "5thSATURDAY",
-          "SUNDAY",
-        ],
-      },
-    ],
+    weeklyOffs: {
+      type: [
+        {
+          type: String,
+          enum: [
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY",
+            "FRIDAY",
+            "1stSATURDAY",
+            "2ndSATURDAY",
+            "3rdSATURDAY",
+            "4thSATURDAY",
+            "5thSATURDAY",
+            "SUNDAY",
+          ],
+        },
+      ],
+      default: [],
+    },
   },
   { _id: false },
 );
