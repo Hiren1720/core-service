@@ -41,6 +41,7 @@ export const getCompanyEmployeeStatusHistory = async (
       MonthlyEmployeeSnapshotModel.find({
         year,
         month,
+        companyId
       })
         .select(
           " -createdAt -updatedAt -__v -activePeriods -inactivePeriods -deletedPeriods",
