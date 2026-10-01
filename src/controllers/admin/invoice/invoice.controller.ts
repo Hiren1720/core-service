@@ -56,6 +56,7 @@ export const getCompanyEmployeeStatusHistory = async (
       MonthlyEmployeeSnapshotModel.countDocuments({
         year,
         month,
+        companyId
       }),
     ]);
     return res
