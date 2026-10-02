@@ -8,9 +8,11 @@ import {
   defaultDeductionType,
   expenseStatus,
   payslipValueType,
+  userStatus,
 } from "../types/types";
 import {
   AttendanceModel,
+  CompanyModel,
   DeductionModel,
   PayrollModel,
   ReimbursementModel,
@@ -19,6 +21,47 @@ import {
   UserPolicyModel,
 } from "../infrastructure/database/models";
 import { getDaysInCurrentMonth } from "../shared/helpers/dateHelper";
+
+export const generateCompanyPayroll = async ({
+  year,
+  month,
+}: {
+  year: number;
+  month: number;
+}) => {
+  const startDate = new Date(year, month - 1, 1);
+
+  const companies = await CompanyModel.find({
+    $or: [
+      { unusedAt: { $exists: false } },
+      { unusedAt: null },
+      { unusedAt: { $gte: startDate } },
+    ],
+  })
+    .select("_id employeePrice")
+    .lean();
+
+  for (const company of companies) {
+    const users = await UserModel.find({
+      companyId: company._id,
+      role: { $ne: "OWNER" },
+      status: {
+        $nin: [userStatus.PENDING, userStatus.REJECTED],
+      },
+      $or: [
+        { unusedAt: { $exists: false } },
+        { unusedAt: null },
+        { unusedAt: { $gte: startDate } },
+      ],
+    })
+      .select("_id companyId")
+      .lean();
+
+    for (const user of users) {
+      await generateEmployeePayroll(user._id.toString(), month, year);
+    }
+  }
+};
 
 export const generateEmployeePayroll = async (
   userId: string,
@@ -34,7 +77,7 @@ export const generateEmployeePayroll = async (
     // 1. Payroll period
     // ---------------------------------------------
 
-    const { periodStart, periodEnd } = getPayrollPeriod(
+    const { periodStart, periodEnd, days } = getPayrollPeriod(
       payrollMonth,
       payrollYear,
     );
@@ -140,6 +183,8 @@ export const generateEmployeePayroll = async (
       policy: policy.policyId,
     });
 
+    const monthSalary =
+      (payslip.salary / days) * attendanceResult.summary.totalWorkingDays;
     // ---------------------------------------------
     // 10. Reimbursements
     // ---------------------------------------------
@@ -150,16 +195,17 @@ export const generateEmployeePayroll = async (
     // 11. Earnings
     // ---------------------------------------------
     const attendancePayment = buildPaymentEarnings({
-      salary: payslip.salary,
+      salary: monthSalary,
+      dailySalary: payslip.salary / days,
       shiftMinutes: employee?.shiftId?.minutes || 0,
       attendanceResult,
       policy: policy?.policyId,
     });
-
     // ---------------------------------------------
     // 12. Deductions
     // ---------------------------------------------
     const deductions = buildPayrollDeductions({
+      salary: monthSalary,
       payslip: payslip,
       taxDeduction: deduction,
     });
@@ -184,7 +230,7 @@ export const generateEmployeePayroll = async (
     );
     const reimbursementsAmount = reimbursementResult.totalAmount;
     const totals = {
-      salaryAmount: payslip.salary,
+      salaryAmount: monthSalary,
       attendanceSalaryAmount,
       deductionsAmount,
       reimbursementsAmount,
@@ -247,9 +293,12 @@ export const getPayrollPeriod = (month: number, year: number) => {
   periodStart.setHours(0, 0, 0, 0);
   periodEnd.setHours(23, 59, 59, 999);
 
+  const days = new Date(year, month, 0).getDate();
+
   return {
     periodStart,
     periodEnd,
+    days,
   };
 };
 
@@ -297,9 +346,10 @@ export const calculateSalaryBreakdown = (
     });
   }
 
-  if (totalDefinedAmount > salary) {
-    throw new Error("Payslip components cannot exceed total salary");
-  }
+  // console.log("totalDefinedAmount", totalDefinedAmount, salary);
+  // if (totalDefinedAmount > salary) {
+  //   throw new Error("Payslip components cannot exceed total salary");
+  // }
 
   const remainingAmount = salary - totalDefinedAmount;
 
@@ -573,11 +623,13 @@ const calculateAttendancePayroll = ({
 
 export const buildPaymentEarnings = ({
   salary,
+  dailySalary,
   shiftMinutes,
   attendanceResult,
   policy,
 }: {
   salary: number;
+  dailySalary: number;
   shiftMinutes: number;
   attendanceResult: AttendancePayrollResult;
   policy: any;
@@ -599,10 +651,6 @@ export const buildPaymentEarnings = ({
   const {
     overtime: { overtimeRate },
   } = policy;
-
-  const daysInMonth = getDaysInCurrentMonth();
-
-  const dailySalary = salary / daysInMonth;
 
   const minuteSalary = dailySalary / shiftMinutes;
 
@@ -721,14 +769,16 @@ export const buildPaymentEarnings = ({
 };
 
 export const buildPayrollDeductions = ({
+  salary,
   payslip,
   taxDeduction,
 }: {
+  salary: number;
   payslip: any;
   taxDeduction: any;
 }): EarningDeduction[] => {
   const deductions: EarningDeduction[] = [];
-  const { salary, allowPFDeduction, allowESICDeduction } = payslip;
+  const { allowPFDeduction, allowESICDeduction } = payslip;
 
   // Tax deductions
   if (taxDeduction?.details?.length > 0) {

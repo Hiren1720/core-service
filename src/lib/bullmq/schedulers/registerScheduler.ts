@@ -6,6 +6,7 @@ import {
 } from "./attendance.scheduler";
 
 import { registerMonthlyInvoiceScheduler } from "./invoice.scheduler";
+import { registerMonthlyPayrollScheduler } from "./payroll.scheduler";
 
 export const registerSchedulers = () => {
   // Daily attendance at 00:59 AM IST
@@ -36,6 +37,18 @@ export const registerSchedulers = () => {
     "0 1 1 * *",
     async () => {
       await registerMonthlyInvoiceScheduler();
+    },
+    {
+      timezone: "Asia/Kolkata",
+    },
+  );
+
+  // Monthly payroll generation
+  // 1st day of every month at 2:00 AM IST
+  cron.schedule(
+    "0 2 1 * *",
+    async () => {
+      await registerMonthlyPayrollScheduler();
     },
     {
       timezone: "Asia/Kolkata",
