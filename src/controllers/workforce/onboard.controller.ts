@@ -652,7 +652,7 @@ export const assignRolesResponsibility = async (
         userId: user.userId,
         password: password,
       });
-console.log("object", password, user)
+
       await sendMail({
         to: user.email,
         subject: `Welcome to IEKA - Your Account Details`,
