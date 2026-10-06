@@ -36,6 +36,7 @@ export const registerSchedulers = () => {
   cron.schedule(
     "0 1 1 * *",
     async () => {
+      console.log("this cron runt at ", new Date());
       await registerMonthlyInvoiceScheduler();
     },
     {
@@ -48,6 +49,7 @@ export const registerSchedulers = () => {
   cron.schedule(
     "0 2 1 * *",
     async () => {
+      console.log("this cron runt at-> ", new Date());
       await registerMonthlyPayrollScheduler();
     },
     {
