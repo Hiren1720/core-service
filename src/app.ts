@@ -55,7 +55,7 @@ app.use(errorMiddleware);
 // processCompanyDailyAttendance({companyId:"6a312d0ca1023683916a1eaf", attendanceDate: new Date() });
 // processAutoCloseAttendance({companyId:"6a312d0ca1023683916a1eaf", attendanceDate: new Date() });
 // generateUserMonthlyPunchTestData("6a72f0f95fd6f853a3728612", 8, 2026)
-// generateEmployeePayroll("6a72f0f95fd6f853a3728612", 8, 2026)
+// generateEmployeePayroll("6ab10d40432fed3b28406d4f", 9, 2026)
 // defaultDeduction("6a72f0f95fd6f853a3728612")
 // generateCompanyPayroll({ year: 2026, month: 9 });
 export default app;

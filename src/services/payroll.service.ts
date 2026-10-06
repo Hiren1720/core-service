@@ -120,7 +120,8 @@ export const generateEmployeePayroll = async (
       .populate("payslipId");
 
     if (!payslip) {
-      throw new Error("Payslip not found");
+      console.log("Payslip not found");
+      return;
     }
     // ---------------------------------------------
     // 4. Policy
@@ -406,6 +407,7 @@ const calculateAttendancePayroll = ({
     // Weekly off / holiday
     // -----------------------------------------------
 
+    totalWorkingDays += 1;
     if (status === attendanceType.WEEK_OFF) {
       weeklyOffDays += 1;
       continue;
@@ -415,7 +417,6 @@ const calculateAttendancePayroll = ({
       continue;
     }
 
-    totalWorkingDays += 1;
 
     // -----------------------------------------------
     // Half day
