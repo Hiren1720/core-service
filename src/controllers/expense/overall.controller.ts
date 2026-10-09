@@ -180,7 +180,7 @@ export const getOverallExpensesCount = async (
             (officeExpense[0]?.totalAmount || 0),
           reimbursement: reimbursement[0]?.totalAmount || 0,
           officeExpense: officeExpense[0]?.totalAmount || 0,
-          salary: salary[0]?.totalAmount,
+          salary: salary[0]?.totalAmount || 0,
           past: {
             total:
               (pastReimbursement[0]?.totalAmount || 0) +
