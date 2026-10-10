@@ -533,7 +533,7 @@ export const monthAttendaceSummary = async (
           select: "duration leaveId",
           populate: {
             path: "leaveId",
-            select: "isPaid",
+            select: "isPaid name",
           },
         })
         .sort({ attendanceDate: 1 })
