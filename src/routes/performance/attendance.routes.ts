@@ -33,7 +33,7 @@ router.get("/my/monthly", authenticateUser, getAttendanceByMonth);
 
 router.get("/my/monthly/count", authenticateUser, getAttendanceCountByMonth);
 
-router.get("/my/monthly/summary", monthAttendaceSummary);
+router.get("/my/monthly/summary", authenticateUser, monthAttendaceSummary);
 
 router.get("/daily", authenticateUser, getAttendanceByDate);
 
