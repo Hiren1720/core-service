@@ -11,6 +11,7 @@ import {
   getAttendanceCountByMonth,
   getMyTodayStatus,
   manualPunch,
+  monthAttendaceSummary,
   punchIn,
   punchOut,
 } from "../../controllers/performance/myAttendance.controller.js";
@@ -31,6 +32,8 @@ router.get("/my/status", authenticateUser, getMyTodayStatus);
 router.get("/my/monthly", authenticateUser, getAttendanceByMonth);
 
 router.get("/my/monthly/count", authenticateUser, getAttendanceCountByMonth);
+
+router.get("/my/monthly/summary", monthAttendaceSummary);
 
 router.get("/daily", authenticateUser, getAttendanceByDate);
 

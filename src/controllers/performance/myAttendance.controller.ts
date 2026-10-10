@@ -474,3 +474,166 @@ const createMonthlyDaySpecificAttendance = async (
 
   return attendanceResults.filter((attendance) => attendance !== null);
 };
+
+export const monthAttendaceSummary = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { userId, month, year } = req.query;
+
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+
+    if (
+      !userId ||
+      !Number.isInteger(monthNumber) ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      !Number.isInteger(yearNumber)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid userId, month and year are required",
+      });
+    }
+
+    const startDate = new Date(yearNumber, monthNumber - 1, 1);
+    const endDate = new Date(yearNumber, monthNumber, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const [policy, attendance] = await Promise.all([
+      UserPolicyModel.findOne({
+        userId: userId.toString(),
+        $or: [
+          { effectiveFromYear: { $lt: yearNumber } },
+          {
+            effectiveFromYear: yearNumber,
+            effectiveFromMonth: { $lte: monthNumber },
+          },
+        ],
+      })
+        .sort({
+          effectiveFromYear: -1,
+          effectiveFromMonth: -1,
+        })
+        .populate("policyId")
+        .lean(),
+
+      AttendanceModel.find({
+        userId: userId.toString(),
+        attendanceDate: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      })
+        .populate({
+          path: "leaveRequestId",
+          select: "duration leaveId",
+          populate: {
+            path: "leaveId",
+            select: "isPaid",
+          },
+        })
+        .sort({ attendanceDate: 1 })
+        .lean(),
+    ]);
+
+    const monthDays = new Date(yearNumber, monthNumber, 0).getDate();
+
+    let presentDays = 0;
+    let presentRecord = [];
+    let leaveDays = 0;
+    let leaveRecord = [];
+
+    let absentDays = 0;
+    let absentRecord = [];
+    let weekOffDays = 0;
+    let weekOffRecord = [];
+    let holidayDays = 0;
+    let holidayRecord = [];
+    let payableDays = 0;
+
+    for (const record of attendance) {
+      const hasLeave = Boolean(record.leaveRequestId);
+      const isHalfDay = record.isHalfDay === true;
+      const isPresent = record.attendanceStatus === attendanceType.PRESENT;
+      const isAbsent = record.attendanceStatus === attendanceType.ABSENT;
+      const isWeekOff = record.attendanceStatus === attendanceType.WEEK_OFF;
+      const isHoliday = record.attendanceStatus === attendanceType.HOLIDAY;
+
+      if (isPresent) {
+        presentDays += isHalfDay ? 0.5 : 1;
+        presentRecord.push(record);
+      }
+
+      if (hasLeave) {
+        leaveDays += isHalfDay ? 0.5 : 1;
+        leaveRecord.push(record);
+      } else if (isHalfDay && isPresent) {
+        // Remaining half-day is unpaid absence unless policy
+        // says otherwise.
+        absentDays += 0.5;
+        absentRecord.push(record);
+      } else if (isAbsent) {
+        // Adapt this branch to your actual status enum,
+        // especially if it includes WEEK_OFF or HOLIDAY.
+        absentDays += 1;
+        absentRecord.push(record);
+      } else if (isWeekOff) {
+        weekOffDays += 1;
+        weekOffRecord.push(record);
+      } else if (isHoliday) {
+        holidayDays += 1;
+        holidayRecord.push(record);
+      }
+
+      // Basic payable calculation:
+      // present time + paid leave time.
+      const leaveRequest = record.leaveRequestId as any;
+      const isPaidLeave = leaveRequest?.leaveId?.isPaid === true;
+
+      if (isPresent) {
+        payableDays += isHalfDay ? 0.5 : 1;
+      }
+
+      if (hasLeave && isPaidLeave) {
+        payableDays += isHalfDay ? 0.5 : 1;
+      }
+    }
+
+    const workingDays = Math.max(monthDays - weekOffDays - holidayDays, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        period: {
+          month: monthNumber,
+          year: yearNumber,
+          startDate,
+          endDate,
+          monthDays,
+        },
+        policy,
+        summary: {
+          presentDays,
+          presentRecord,
+          weekOffDays,
+          weekOffRecord,
+          leaveDays,
+          leaveRecord,
+          holidayDays,
+          holidayRecord,
+          absentDays,
+          absentRecord,
+          workingDays,
+          payableDays,
+        },
+        attendance,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
