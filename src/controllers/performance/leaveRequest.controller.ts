@@ -8,14 +8,18 @@ import {
 } from "../../services/validateLeavePolicy";
 import { calculateLeaveDays } from "../../services/calculateLeaveDays";
 import {
+  AttendanceModel,
   LeaveRequestModel,
   UserLeaveBalanceModel,
   UserModel,
 } from "../../infrastructure/database/models";
-import { leaveStatusType } from "../../types/types";
+import { attendanceType, leaveStatusType } from "../../types/types";
 import { validateLeaveBalance } from "../../services/leave.service";
 import { addUserHistory } from "../../shared/services/userHistory.service";
-import { normalizeDate } from "../../shared/helpers/dateHelper";
+import {
+  getDatePartsInTimeZone,
+  normalizeDate,
+} from "../../shared/helpers/dateHelper";
 import { downloadCsv } from "../../shared/utils/csvDownload";
 import { getMyManagedUserIdList } from "../../shared/services/users.service";
 
@@ -271,6 +275,21 @@ export const updateLeaveApplicationStatus = async (
       return res.status(400).json(ApiResponse.error("Leave already processed"));
     }
 
+    const now = getDatePartsInTimeZone(new Date(), "Asia/Kolkata");
+    const leaveDate = getDatePartsInTimeZone(
+      leaveRequest.startDate,
+      "Asia/Kolkata",
+    );
+    const currentMonth = now.year * 12 + now.month;
+    const leaveMonth = leaveDate.year * 12 + leaveDate.month;
+
+    if (leaveMonth < currentMonth) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json(ApiResponse.error("Past month leave status cannot be changed"));
+    }
+
     // --------------------------------------------------
     // Find user's leave balance
     // --------------------------------------------------
@@ -307,6 +326,35 @@ export const updateLeaveApplicationStatus = async (
 
       leaveBalance.pendingApproval -= totalDays;
       leaveBalance.used += totalDays;
+
+      const isHalfDay =
+        leaveRequest.duration === "FIRST_HALF" ||
+        leaveRequest.duration === "SECOND_HALF";
+
+      const attendanceRecords = await AttendanceModel.find({
+        userId: leaveRequest.userId,
+        attendanceDate: {
+          $gte: normalizeDate(leaveRequest.startDate),
+          $lte: normalizeDate(leaveRequest.endDate),
+        },
+      }).session(session);
+
+      for (const attendance of attendanceRecords) {
+        if (isHalfDay) {
+          attendance.attendanceStatus =
+            attendance.inTime || attendance.outTime
+              ? attendanceType.PRESENT
+              : attendanceType.ABSENT;
+        } else {
+          attendance.attendanceStatus = attendanceType.LEAVE;
+          attendance.inTime = null;
+          attendance.outTime = null;
+        }
+
+        attendance.leaveRequestId = leaveRequest._id;
+        attendance.isHalfDay = isHalfDay;
+        await attendance.save({ session });
+      }
     }
 
     // --------------------------------------------------

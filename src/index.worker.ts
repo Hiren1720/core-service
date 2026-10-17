@@ -9,8 +9,13 @@ async function startWorkers() {
 
     const attendanceWorkerPath = "./lib/bullmq/workers/attendance.worker.js";
     const invoiceWorkerPath = "./lib/bullmq/workers/invoice.worker.js";
+    const payrollWorkerPath = "./lib/bullmq/workers/payroll.worker.js";
+    const leaveWorkerPath = "./lib/bullmq/workers/leave.worker.js";
+    
     await import(attendanceWorkerPath);
     await import(invoiceWorkerPath);
+    await import(payrollWorkerPath);
+    await import(leaveWorkerPath);
 
     console.log("✅ Workers started");
   } catch (error) {

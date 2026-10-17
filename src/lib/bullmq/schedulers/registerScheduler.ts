@@ -7,6 +7,8 @@ import {
 
 import { registerMonthlyInvoiceScheduler } from "./invoice.scheduler";
 import { registerMonthlyPayrollScheduler } from "./payroll.scheduler";
+import { registerMonthlyLeaveAutoRejectScheduler } from "./leave.scheduler";
+import { getDatePartsInTimeZone } from "../../../shared/helpers/dateHelper";
 
 export const registerSchedulers = () => {
   // Daily attendance at 00:59 AM IST
@@ -51,6 +53,24 @@ export const registerSchedulers = () => {
     async () => {
       console.log("this cron runt at-> ", new Date());
       await registerMonthlyPayrollScheduler();
+    },
+    {
+      timezone: "Asia/Kolkata",
+    },
+  );
+
+  // Auto-reject unresolved leave applications just after month end
+  cron.schedule(
+    "1 0 1 * *",
+    async () => {
+      const { year, month } = getDatePartsInTimeZone(
+        new Date(),
+        "Asia/Kolkata",
+      );
+      await registerMonthlyLeaveAutoRejectScheduler({
+        year,
+        month,
+      });
     },
     {
       timezone: "Asia/Kolkata",

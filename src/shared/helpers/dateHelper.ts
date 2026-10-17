@@ -17,6 +17,21 @@ export const normalizeDate = (date: Date | string): Date => {
   return normalized;
 };
 
+export const getDatePartsInTimeZone = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value),
+    month: Number(parts.find((part) => part.type === "month")?.value),
+    day: Number(parts.find((part) => part.type === "day")?.value),
+  };
+};
+
 export const getTimeDifferenceInMinutes = (
   startTime: string,
   endTime: string,
