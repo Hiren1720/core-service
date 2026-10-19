@@ -64,14 +64,14 @@ export const validateLeavePolicy = async ({
     throw new Error("This leave type is not allowed in your policy");
   }
 
-  const hoursBeforeLeave =
-    (startDate.getTime() - Date.now()) / (1000 * 60 * 60);
+  // const hoursBeforeLeave =
+  //   (startDate.getTime() - Date.now()) / (1000 * 60 * 60);
 
-  if (hoursBeforeLeave < leavePolicy.hoursBeforeLeave) {
-    throw new Error(
-      `Leave must be applied at least ${leavePolicy.hoursBeforeLeave} hours before`,
-    );
-  }
+  // if (hoursBeforeLeave < leavePolicy.hoursBeforeLeave) {
+  //   throw new Error(
+  //     `Leave must be applied at least ${leavePolicy.hoursBeforeLeave} hours before`,
+  //   );
+  // }
 
   return {
     policy,
