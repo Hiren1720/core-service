@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import {
   AttendanceModel,
+  PunctBtnModel,
   UserPolicyModel,
 } from "../../infrastructure/database/models";
 import { ApiResponse } from "../../shared/response/api-response";
@@ -15,36 +16,53 @@ export const punchIn = async (
   res: Response,
   next: NextFunction,
 ) => {
+  const { id: userId } = req.user!;
+  const [clickRecord] = await PunctBtnModel.create([
+    {
+      userId,
+      btnClickTime: new Date(),
+      punchType: "IN",
+    },
+  ]);
   const session = await mongoose.startSession();
 
   try {
-    session.startTransaction();
+    let attendance;
+    let transactionStarted = false;
+    try {
+      session.startTransaction();
+      transactionStarted = true;
 
-    const { id: userId } = req.user!;
-    const { latitude, longitude, address, method = "MOBILE" } = req.body;
+      const { latitude, longitude, address, method = "MOBILE" } = req.body;
+      attendance = await PunchInFn(
+        userId,
+        latitude !== undefined && longitude !== undefined
+          ? {
+              latitude,
+              longitude,
+              address: address || "",
+            }
+          : null,
+        method,
+        session,
+        null,
+      );
 
-    const attendance = await PunchInFn(
-      userId,
-      latitude !== undefined && longitude !== undefined
-        ? {
-            latitude,
-            longitude,
-            address: address || "",
-          }
-        : null,
-      method,
-      session,
-      null,
-    );
+      await session.commitTransaction();
+      transactionStarted = false;
+    } catch (error) {
+      if (transactionStarted) {
+        await session.abortTransaction();
+      }
+      await clickRecord.updateOne({ btnClickComplete: true });
+      next(error);
+      return;
+    }
 
-    await session.commitTransaction();
-
+    await clickRecord.updateOne({ btnClickComplete: true });
     return res
       .status(200)
       .json(ApiResponse.success(attendance, "Punch in successful"));
-  } catch (error) {
-    await session.abortTransaction();
-    next(error);
   } finally {
     await session.endSession();
   }
@@ -55,37 +73,54 @@ export const punchOut = async (
   res: Response,
   next: NextFunction,
 ) => {
+  const { id: userId } = req.user!;
+  const [clickRecord] = await PunctBtnModel.create([
+    {
+      userId,
+      btnClickTime: new Date(),
+      punchType: "OUT",
+    },
+  ]);
   const session = await mongoose.startSession();
 
   try {
-    session.startTransaction();
+    let attendance;
+    let transactionStarted = false;
+    try {
+      session.startTransaction();
+      transactionStarted = true;
 
-    const { id: userId } = req.user!;
-    const { latitude, longitude, address, method = "MOBILE" } = req.body;
+      const { latitude, longitude, address, method = "MOBILE" } = req.body;
+      attendance = await PunchOutFn(
+        userId,
+        latitude !== undefined && longitude !== undefined
+          ? {
+              latitude,
+              longitude,
+              address: address || "",
+            }
+          : null,
+        method,
+        session,
+        null,
+        false,
+      );
 
-    const attendance = await PunchOutFn(
-      userId,
-      latitude !== undefined && longitude !== undefined
-        ? {
-            latitude,
-            longitude,
-            address: address || "",
-          }
-        : null,
-      method,
-      session,
-      null,
-      false,
-    );
+      await session.commitTransaction();
+      transactionStarted = false;
+    } catch (error) {
+      if (transactionStarted) {
+        await session.abortTransaction();
+      }
+      await clickRecord.updateOne({ btnClickComplete: true });
+      next(error);
+      return;
+    }
 
-    await session.commitTransaction();
-
+    await clickRecord.updateOne({ btnClickComplete: true });
     return res
       .status(200)
       .json(ApiResponse.success(attendance, "Punch out successful"));
-  } catch (error) {
-    await session.abortTransaction();
-    next(error);
   } finally {
     await session.endSession();
   }

@@ -17,6 +17,7 @@ import { PayrollModel } from "./payroll.model.js";
 import { PayslipModel } from "./payslip.model.js";
 import { PolicyModel } from "./Policy.model.js";
 import { PromotionModel } from "./promotion.model.js";
+import { PunctBtnModel } from "./punctBtn.model.js";
 import { ReimbursementModel } from "./reimbursement.model.js";
 import { ResignationModel } from "./resignation.model.js";
 import { ShiftModel } from "./shift.model.js";
@@ -51,6 +52,7 @@ export {
   PayslipModel,
   PolicyModel,
   PromotionModel,
+  PunctBtnModel,
   ReimbursementModel,
   ResignationModel,
   ShiftModel,
